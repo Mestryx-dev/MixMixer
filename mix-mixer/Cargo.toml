@@ -2,7 +2,7 @@
 name = "mix-mixer"
 version = "0.1.0"
 edition = "2021"
-description = "Forward microphone post-E-APO to VB-Cable virtual mic"
+description = "Forward microphone post-E-APO to VB-Cable virtual mic (low latency)"
 rust-version = "1.75"
 
 [dependencies]

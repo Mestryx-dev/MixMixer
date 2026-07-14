@@ -7,6 +7,7 @@ use cpal::{BufferSize, Sample, SampleFormat, SampleRate, Stream, StreamConfig, S
 use crossbeam_channel::Receiver;
 use tracing::{info, warn};
 
+use crate::audio::metrics::AudioMetrics;
 use crate::audio::mixer::{apply_voice_gain, MixControls};
 use crate::audio::resampler::{from_stereo_interleaved, to_stereo_interleaved, StereoResampler};
 use crate::audio::ring_buffer::SpscRingBuffer;
@@ -68,12 +69,13 @@ pub struct AudioEngine {
     voice_rb: Arc<SpscRingBuffer>,
     monitor_rb: Arc<SpscRingBuffer>,
     stream_fault: Arc<AtomicBool>,
+    metrics: Arc<AudioMetrics>,
     reconnect: ReconnectState,
     _streams: Vec<Stream>,
 }
 
 impl AudioEngine {
-    pub fn new(config: Config) -> Result<Self> {
+    pub fn new(config: Config, metrics: Arc<AudioMetrics>) -> Result<Self> {
         let controls = Arc::new(MixControls::from_gains(
             &config.gains,
             config.monitor.enabled,
@@ -89,9 +91,12 @@ impl AudioEngine {
             voice_rb,
             monitor_rb,
             stream_fault,
+            metrics,
             reconnect: ReconnectState::idle(),
             _streams: Vec::new(),
         };
+
+        engine.sync_metrics();
 
         if engine.config.enabled {
             if let Err(err) = engine.start_streams() {
@@ -143,6 +148,7 @@ impl AudioEngine {
     fn poll_stream_health(&mut self) {
         if !self.config.enabled {
             self.reconnect = ReconnectState::idle();
+            self.sync_metrics();
             return;
         }
 
@@ -155,6 +161,7 @@ impl AudioEngine {
         }
 
         if !self.reconnect.pending || Instant::now() < self.reconnect.next_at {
+            self.sync_metrics();
             return;
         }
 
@@ -171,6 +178,25 @@ impl AudioEngine {
                 self.reconnect.backoff();
             }
         }
+        self.sync_metrics();
+    }
+
+    fn sync_metrics(&self) {
+        self.metrics.set_voice_buffer(
+            self.voice_rb.available(),
+            RING_CAPACITY_SAMPLES,
+        );
+        self.metrics
+            .set_streams(self._streams.len());
+        self.metrics.set_config(
+            self.config.sample_rate,
+            self.config.buffer_frames,
+        );
+        self.metrics.set_routing_live(
+            self.config.enabled && !self._streams.is_empty(),
+        );
+        self.metrics
+            .set_reconnect_pending(self.reconnect.pending);
     }
 
     fn apply_config(&mut self, config: Config, restart_streams: bool) {
@@ -202,6 +228,7 @@ impl AudioEngine {
         }
         self._streams = streams;
         info!(streams = self._streams.len(), "audio streams started");
+        self.sync_metrics();
         Ok(())
     }
 
@@ -260,6 +287,7 @@ impl AudioEngine {
         }
         drop(old_streams);
         std::thread::sleep(Duration::from_millis(RELEASE_SETTLE_MS));
+        self.sync_metrics();
     }
 
     fn restore_streams(&mut self, config: &Config) -> Result<()> {

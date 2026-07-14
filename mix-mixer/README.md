@@ -1,116 +1,105 @@
 # MixMixer
 
-Minimal Windows tray app that mixes **voice (post-Equalizer APO)** with **soundboard audio** (WAV hotkeys + VB-Cable) and sends the result to a virtual microphone and optional headphone monitor.
+Application Windows tray minimaliste : **micro post-Equalizer APO → VB-Cable** avec latence minimale.
 
-## What it does
+## Ce que ça fait
 
 ```
-fifine Mic (post E-APO) ──► capture ──┐
-CABLE Output (external sfx) ──► capture ──┼──► mix ──► CABLE Input (Discord micro)
-WAV hotkeys (F1, F2, …) ────────────────┘              └──► fifine SC3 (monitor)
+fifine Mic (post E-APO) ──► MixMixer ──► CABLE Input ──► CABLE Output ──► Discord / GTA / OBS
+                              │
+                              └──► fifine SC3 (monitor, optionnel)
+
+Apps / soundboard / navigateur ──► CABLE Input (séparément, mix Windows)
 ```
 
-- **Discord / games / OBS** use `CABLE Output` as the microphone.
-- **Equalizer APO** stays on the physical fifine microphone (unchanged).
-- **Soundpad UniteFx** should be disabled to avoid double injection.
+- **MixMixer** route uniquement le micro vers **CABLE Input**.
+- **Discord / jeux** : micro = **CABLE Output** (pas le fifine directement).
+- **Soundboard externe** : envoyer l'audio vers **CABLE Input** depuis une autre app ; Windows mixe avec le micro.
 
-## Requirements
+## Prérequis
 
 - Windows 10/11
-- [VB-Audio Virtual Cable](https://vb-audio.com/Cable/)
-- [Equalizer APO](https://sourceforge.net/projects/equalizerapo/) on the fifine mic
-- [Rust toolchain](https://rustup.rs/) + MSVC Build Tools (for building from source)
+- **[VB-Audio Virtual Cable](https://vb-audio.com/Cable/)** (obligatoire) — installer en administrateur, redémarrer si demandé
+- [Equalizer APO](https://sourceforge.net/projects/equalizerapo/) sur le micro fifine (optionnel, pour la chaîne VST)
+- [Rust toolchain](https://rustup.rs/) + MSVC Build Tools (pour compiler)
 
 ## Build
 
 ```powershell
-# From a Developer Command Prompt or after vcvars64.bat:
 cd d:\Audio\mix-mixer
 cargo build --release
 ```
 
-Binary: `target\release\mix-mixer.exe`
+Binaire : `target\release\mix-mixer.exe`
 
-## Setup
+## Installation
 
-1. Copy `config.example.json` → `config.json` in the same folder as the exe.
-2. Create a `sounds/` folder and add WAV files referenced in config bindings.
-3. List devices to verify names:
+1. Copier `config.example.json` → `config.json` (même dossier que l'exe).
+2. Lister les périphériques :
 
    ```powershell
    mix-mixer --list-devices
    ```
 
-4. **Windows audio**
-   - Discord / games micro: **CABLE Output**
-   - Equalizer APO: **fifine Microphone** (keep your VST chain)
-5. **UniteFx** : laisser **inactif** si déjà le cas ; ne réactiver que si tu n'utilises plus MixMixer.
-6. Run MixMixer from the folder containing `config.json`:
-
-   ```powershell
-   mix-mixer.exe
-   ```
+3. Ajuster les noms dans `config.json` (substring insensible à la casse).
+4. **Discord / GTA** : micro = **CABLE Output**.
+5. **Equalizer APO** : reste sur **fifine Microphone**.
+6. Lancer MixMixer (double-clic ou depuis le dossier contenant `config.json`).
 
 ## Config
 
-Device names are matched by **case-insensitive substring** (e.g. `"fifine Microphone"` matches `"Microphone (2- fifine Microphone)"`).
+| Clé | Défaut | Rôle |
+|-----|--------|------|
+| `devices.voice_input` | fifine Microphone | Capture micro post-E-APO |
+| `devices.virtual_mic_output` | CABLE Input | Sortie vers micro virtuel |
+| `devices.monitor_output` | fifine SC3 | Écoute casque (optionnel) |
+| `gains.voice` / `gains.master` | 1.0 / 1.0 | Niveaux |
+| `monitor.enabled` | false | Monitor casque |
+| `buffer_frames` | 128 | Latence (~5 ms à 48 kHz) ; 512 si crackling |
+| `enabled` | true | Routage actif au démarrage |
+| `sample_rate` | 48000 | Taux d'échantillonnage |
 
-| Key | Default | Role |
-|-----|---------|------|
-| `devices.voice_input` | fifine Microphone | Post-E-APO voice capture |
-| `devices.sfx_input` | CABLE Output | External soundboard via VB-Cable |
-| `devices.virtual_mic_output` | CABLE Input | Virtual mic for Discord |
-| `devices.monitor_output` | fifine SC3 | Headphone monitor |
-| `gains.voice` / `gains.sfx` / `gains.master` | 1.0 / 0.85 / 1.0 | Mix levels |
-| `monitor.enabled` | true | SC3 monitor on by default |
-| `monitor.include_sfx` | true | Hear SFX in monitor |
-| `buffer_frames` | 256 | cpal buffer (~5 ms at 48 kHz); increase to 512 if crackling |
+Voir [`config.example.json`](config.example.json).
 
-See [`config.example.json`](config.example.json) for a full example.
+## Fenêtre Réglages
 
-## Tray menu
+S'ouvre au démarrage. Clic tray ou double-clic icône → **Réglages...**
 
-- **Réglages...** — fenêtre graphique (périphériques, écoute, niveaux)
-- **Couper SFX** — voix seule vers le micro virtuel
+| Contrôle | Action |
+|----------|--------|
+| Listes déroulantes | Micro, CABLE Input, monitor casque |
+| ☑ Écoute casque | Monitor SC3 |
+| Sliders | Gain voix, master, buffer |
+| **Appliquer** | Enregistre et active (fenêtre reste ouverte) |
+| **Annuler** | Restaure les valeurs du dernier Appliquer |
+| **Activer / Désactiver** | Coupe ou reprend le routage micro → VB-Cable |
+| **Quitter** | Ferme MixMixer |
+
+**Métriques** (coin bas droit, temps réel) :
+
+- **Délai ~ X ms** — latence estimée (buffers capture + sortie)
+- **Buffer X%** — remplissage tampon voix
+- **Audio actif · N flux** — état du routage
+
+## Menu tray
+
+- **Réglages...**
 - **Activer/désactiver écoute** — monitor casque à chaud
 - **Recharger config** — relit `config.json` et redémarre l'audio
 - **Quitter**
 
-## Fenêtre Réglages
+## Dépannage
 
-Clic droit sur l'icône tray → **Réglages...**
-
-- Listes déroulantes pour micro, SFX, CABLE Input, monitor
-- ☑ Activer l'écoute sur le casque
-- ☑ Inclure les SFX dans l'écoute
-- Sliders voix / SFX / master
-- **Appliquer** — sauvegarde `config.json` et redémarre les flux audio
-
-## Hotkeys
-
-Configure in `config.json` under `soundboard.bindings`. Supported keys include `F1`–`F12`, `Numpad0`–`Numpad9`, and `Space`.
-
-## External soundboard (VB-Cable)
-
-To play audio from another app into the mix:
-
-1. Set that app's output to **CABLE Input** (playback).
-2. MixMixer captures **CABLE Output** and mixes it with voice + WAV hotkeys.
-
-Do **not** route CABLE Output → CABLE Input without MixMixer in the chain (feedback loop).
-
-## Troubleshooting
-
-| Issue | Fix |
-|-------|-----|
-| Crackling / dropouts | Increase `buffer_frames` to 512 |
-| Device not found | Run `--list-devices`, adjust substring in config |
-| Discord silent | Confirm Discord micro = CABLE Output; MixMixer running |
-| Double SFX / weird processing | Disable Soundpad UniteFx APO on mic |
-| Sample rate mismatch | MixMixer resamples inputs automatically if native rate ≠ 48 kHz |
+| Problème | Solution |
+|----------|----------|
+| Crackling | Augmenter `buffer_frames` à 256 ou 512 |
+| Périphérique introuvable | `mix-mixer --list-devices`, ajuster substring |
+| Discord muet | Micro Discord = **CABLE Output** ; routage MixMixer activé |
+| Crash / silence après changement micro Discord/GTA | Attendre reconnexion auto ; ne pas sélectionner fifine dans Discord |
+| Voir les logs | `$env:RUST_LOG='mix_mixer=info'; .\mix-mixer.exe` (ouvre un terminal) |
 
 ## Docs
 
-- Technical spec: [`../docs/dev-mix-mixer.md`](../docs/dev-mix-mixer.md)
-- Validation checklist: [`../docs/validate-mix-mixer.md`](../docs/validate-mix-mixer.md)
-- Architecture decision: DEC-005 in [`../docs/decisions.md`](../docs/decisions.md)
+- Spec : [`../docs/dev-mix-mixer.md`](../docs/dev-mix-mixer.md)
+- Validation : [`../docs/validate-mix-mixer.md`](../docs/validate-mix-mixer.md)
+- Décisions : DEC-005 / DEC-006 dans [`../docs/decisions.md`](../docs/decisions.md)

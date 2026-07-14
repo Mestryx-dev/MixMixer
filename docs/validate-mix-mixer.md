@@ -1,100 +1,99 @@
 # MixMixer — checklist de validation manuelle
 
-> À exécuter sur la machine cible avec la chaîne E-APO fifine active.  
-> Prérequis : VB-Cable installé. Soundpad UniteFx **inactif** (état local confirmé).
+> v0.1 — routage micro → VB-Cable uniquement.  
+> Prérequis : [VB-Audio Virtual Cable](https://vb-audio.com/Cable/) installé. Soundpad UniteFx **inactif**.
 
 ---
 
 ## Préparation
 
-- [ ] `mix-mixer.exe` build release dans `mix-mixer/target/release/`
+- [ ] `mix-mixer.exe` build release : `mix-mixer/target/release/`
 - [ ] `config.json` copié depuis `config.example.json`
-- [ ] Dossier `sounds/` avec `applause.wav` et `bruh.wav` (ou fichiers configurés)
-- [ ] Discord micro = **CABLE Output**
+- [ ] Discord / GTA micro = **CABLE Output** (pas fifine)
 - [ ] Equalizer APO actif sur **fifine Microphone**
+- [ ] MixMixer routage **activé** (bouton ou `enabled: true`)
 
 ---
 
-## Tests automatiques (déjà validés en dev)
+## Tests automatiques (dev)
 
 | Test | Commande | Critère |
 |------|----------|---------|
-| Unit tests | `cargo test` | 3 tests OK (ring buffer, mixer, device match) |
-| Liste devices | `mix-mixer --list-devices` | fifine Mic, CABLE Output/Input, SC3 visibles |
+| Unit tests | `cargo test` | ring buffer, mixer, device match OK |
+| Liste devices | `mix-mixer --list-devices` | fifine, CABLE Input/Output, SC3 visibles |
 
 **Résultat dev (2026-07-14) :**
 
 ```
-[in ] CABLE Output (VB-Audio Virtual Cable) — 48000 Hz, 2 ch, F32
 [in ] Microphone (2- fifine Microphone) — 48000 Hz, 2 ch, F32
-[out] Haut-parleurs (fifine SC3) — 48000 Hz, 2 ch, F32
+[in ] CABLE Output (VB-Audio Virtual Cable) — 48000 Hz, 2 ch, F32
 [out] CABLE Input (VB-Audio Virtual Cable) — 48000 Hz, 2 ch, F32
+[out] Haut-parleurs (fifine SC3) — 48000 Hz, 2 ch, F32
 ```
 
 ---
 
-## Tests manuels (utilisateur)
+## Tests manuels
 
-### 1 — Voix seule → micro virtuel
+### 1 — Voix → micro virtuel
 
-- [ ] Lancer `mix-mixer.exe`
+- [ ] Lancer MixMixer (pas de terminal en release)
+- [ ] Fenêtre Réglages s'ouvre ; métriques bas droite : **Audio actif**, délai ~5 ms (buffer 128)
 - [ ] Parler dans le micro fifine
-- [ ] Windows Paramètres → Son → Entrée **CABLE Output** → barre de niveau bouge
-- [ ] Discord test vocal : voix audible, traitement E-APO présent (gate/EQ)
+- [ ] Windows → Son → Entrée **CABLE Output** : barre de niveau bouge
+- [ ] Discord test vocal : voix audible, traitement E-APO présent
 
-### 2 — Hotkey WAV
+### 2 — Activer / Désactiver
 
-- [ ] Appuyer **F1** (ou binding configuré)
-- [ ] SFX audible côté Discord
-- [ ] Latence ressentie acceptable (< ~50 ms subjectif)
+- [ ] Cliquer **Désactiver** : métriques → **Audio off**, Discord ne reçoit plus la voix
+- [ ] Cliquer **Activer** : routage reprend, voix de retour dans Discord
 
-### 3 — SFX via VB-Cable externe
+### 3 — Appliquer / Annuler
+
+- [ ] Changer gain voix, **Appliquer** : niveau change dans Discord
+- [ ] Changer gain sans appliquer, **Annuler** : valeur précédente restaurée
+
+### 4 — Monitor SC3 (optionnel)
+
+- [ ] Cocher « Écoute casque », **Appliquer**
+- [ ] Entendre sa voix dans le casque SC3
+- [ ] Tray → **Activer/désactiver écoute** : SC3 muet, Discord inchangé
+
+### 5 — Reconnexion (Discord / GTA)
+
+- [ ] Routage actif, parler dans Discord
+- [ ] Changer le micro dans Discord (CABLE Output ↔ autre) puis revenir sur CABLE Output
+- [ ] MixMixer affiche **Reconnexion…** puis **Audio actif** ; voix revient sans redémarrer l'app
+
+### 6 — Soundboard externe (mix OS)
 
 - [ ] Jouer un son depuis une app vers **CABLE Input** (playback)
-- [ ] SFX mixé avec la voix dans Discord
-- [ ] Simultané avec F1 : les deux sources audibles
+- [ ] Discord entend voix MixMixer + son externe mixés par Windows
 
-### 4 — Monitor SC3
+### 7 — Buffer / latence
 
-- [ ] Casque fifine SC3 entend voix + SFX (`monitor.include_sfx: true`)
-- [ ] Tray → **Toggle monitor** : SC3 muet, Discord inchangé
-- [ ] Remettre monitor ON
-
-### 5 — Mute SFX (tray)
-
-- [ ] Tray → **Toggle mute SFX**
-- [ ] Discord : voix seule, pas de hotkey ni CABLE externe
-- [ ] Désactiver mute : SFX reviennent
-
-### 6 — Reload config
-
-- [ ] Modifier `gains.sfx` dans config.json (ex. 0.5)
-- [ ] Tray → **Reload config**
-- [ ] Niveau SFX réduit sans redémarrage
-
-### 7 — Sans Soundpad UniteFx (N/A si déjà inactif)
-
-- [ ] UniteFx reste **inactif** sur le micro (Device Selector) — état actuel confirmé
-- [ ] Pas de double traitement / pas d'écho fantôme avec MixMixer seul
+- [ ] Buffer 128 : délai affiché ~5 ms
+- [ ] Buffer 512 : pas de crackling si crackling avant
 
 ---
 
-## Critères de succès MVP
+## Critères de succès v0.1
 
 | Critère | Statut |
 |---------|--------|
 | Build release sans erreur | ✅ |
 | `--list-devices` OK | ✅ |
+| Pas de terminal au démarrage release | ✅ |
 | Voix → CABLE Output (Discord) | ⬜ manuel |
-| Hotkey WAV → Discord | ⬜ manuel |
-| VB-Cable sfx mixé | ⬜ manuel |
+| Activer / Désactiver routage | ⬜ manuel |
+| Reconnexion auto Discord/GTA | ⬜ manuel |
+| Métriques temps réel UI | ✅ |
 | Monitor SC3 | ⬜ manuel |
-| Tray mute/reload | ⬜ manuel |
 
 ---
 
 ## Notes
 
-- Si crackling : augmenter `buffer_frames` à 512 dans config.
-- Changement de device : redémarrer MixMixer (reload ne rebind pas les streams).
-- Logs : `RUST_LOG=mix_mixer=debug mix-mixer.exe`
+- Crackling : augmenter `buffer_frames` à 256 ou 512.
+- Logs debug : `$env:RUST_LOG='mix_mixer=debug'; .\mix-mixer.exe`
+- Ne **pas** sélectionner le fifine dans Discord — conflit avec MixMixer.

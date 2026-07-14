@@ -38,7 +38,15 @@
 | Capture (lire le mix) | CABLE Output | `{5f5f2573-25a5-49aa-9410-e4e789159e73}` | ❌ |
 | Playback 16ch | CABLE In 16ch | `{ac0ede3b-a006-432d-9b4c-2d94b247653b}` | ❌ |
 
-**Usage actuel :** installé, non routé dans la chaîne micro.
+**Usage actuel (MixMixer v0.1) :**
+
+| Flux | Device |
+|------|--------|
+| MixMixer sortie voix | **CABLE Input** (playback) |
+| Discord / GTA / OBS micro | **CABLE Output** (capture) |
+| Soundboard externe | Apps → **CABLE Input** (mix Windows) |
+
+Driver : [VB-Audio Virtual Cable](https://vb-audio.com/Cable/) (obligatoire).
 
 ---
 

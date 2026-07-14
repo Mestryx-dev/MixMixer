@@ -2,11 +2,13 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
+use std::time::Duration;
 
 use crossbeam_channel::Sender;
 use eframe::egui;
 use tracing::{error, info};
 
+use crate::audio::metrics::AudioMetrics;
 use crate::config::Config;
 use crate::devices::{best_device_index, enumerate_device_lists, stable_device_query, DeviceLists};
 use crate::error::{Error, Result};
@@ -15,13 +17,15 @@ use crate::AppEvent;
 pub struct SettingsLauncher {
     open: Arc<AtomicBool>,
     event_tx: Sender<AppEvent>,
+    metrics: Arc<AudioMetrics>,
 }
 
 impl SettingsLauncher {
-    pub fn new(event_tx: Sender<AppEvent>) -> Self {
+    pub fn new(event_tx: Sender<AppEvent>, metrics: Arc<AudioMetrics>) -> Self {
         Self {
             open: Arc::new(AtomicBool::new(false)),
             event_tx,
+            metrics,
         }
     }
 
@@ -37,13 +41,14 @@ impl SettingsLauncher {
 
         let devices = enumerate_device_lists()?;
         let event_tx = self.event_tx.clone();
+        let metrics = Arc::clone(&self.metrics);
         let open = Arc::clone(&self.open);
         let initial = config.clone();
 
         thread::Builder::new()
             .name("mix-mixer-settings".into())
             .spawn(move || {
-                let result = run_settings_window(config_path, initial, devices, event_tx);
+                let result = run_settings_window(config_path, initial, devices, event_tx, metrics);
                 open.store(false, Ordering::SeqCst);
                 if let Err(err) = result {
                     error!(%err, "settings window failed");
@@ -63,6 +68,7 @@ struct SettingsApp {
     status: String,
     status_ok: bool,
     event_tx: Sender<AppEvent>,
+    metrics: Arc<AudioMetrics>,
 }
 
 impl SettingsApp {
@@ -71,6 +77,7 @@ impl SettingsApp {
         config: Config,
         devices: DeviceLists,
         event_tx: Sender<AppEvent>,
+        metrics: Arc<AudioMetrics>,
     ) -> Self {
         let baseline = normalize_draft_devices(config, &devices);
 
@@ -82,6 +89,7 @@ impl SettingsApp {
             status: String::new(),
             status_ok: false,
             event_tx,
+            metrics,
         }
     }
 
@@ -97,7 +105,7 @@ impl SettingsApp {
                     return;
                 }
                 self.baseline = self.draft.clone();
-                self.status = "Réglages appliqués — l'application continue en arrière-plan.".into();
+                self.status = "Réglages appliqués.".into();
                 self.status_ok = true;
             }
             Err(err) => {
@@ -131,9 +139,9 @@ impl SettingsApp {
                 }
                 self.baseline.enabled = enabled;
                 self.status = if enabled {
-                    "Routage activé — micro → VB-Cable.".into()
+                    "Routage activé.".into()
                 } else {
-                    "Routage désactivé — le micro n'est plus envoyé vers VB-Cable.".into()
+                    "Routage désactivé.".into()
                 };
                 self.status_ok = true;
             }
@@ -156,17 +164,58 @@ fn normalize_draft_devices(config: Config, devices: &DeviceLists) -> Config {
     draft
 }
 
+fn show_metrics_overlay(ctx: &egui::Context, metrics: &AudioMetrics) {
+    let snap = metrics.snapshot();
+
+    egui::Area::new(egui::Id::new("metrics_overlay"))
+        .anchor(egui::Align2::RIGHT_BOTTOM, egui::vec2(-10.0, -10.0))
+        .interactable(false)
+        .show(ctx, |ui| {
+            egui::Frame::none()
+                .fill(egui::Color32::from_black_alpha(200))
+                .inner_margin(8.0)
+                .rounding(4.0)
+                .show(ui, |ui| {
+                    ui.set_min_width(120.0);
+                    ui.label(
+                        egui::RichText::new(format!("Délai ~ {:.1} ms", snap.estimated_latency_ms))
+                            .monospace()
+                            .size(12.0),
+                    );
+                    ui.label(
+                        egui::RichText::new(format!("Buffer {:.0}%", snap.voice_buffer_pct))
+                            .monospace()
+                            .size(12.0),
+                    );
+                    let route_color = if snap.routing_live {
+                        egui::Color32::LIGHT_GREEN
+                    } else if snap.reconnect_pending {
+                        egui::Color32::LIGHT_YELLOW
+                    } else {
+                        egui::Color32::GRAY
+                    };
+                    let route_label = if snap.routing_live {
+                        "Audio actif"
+                    } else if snap.reconnect_pending {
+                        "Reconnexion…"
+                    } else {
+                        "Audio off"
+                    };
+                    ui.label(
+                        egui::RichText::new(format!("{route_label} · {} flux", snap.streams_active))
+                            .monospace()
+                            .size(12.0)
+                            .color(route_color),
+                    );
+                });
+        });
+}
+
 impl eframe::App for SettingsApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("MixMixer — Réglages");
-            ui.label("Micro post-E-APO → VB-Cable. Soundboard / navigateur : envoie vers CABLE Input séparément.");
-            ui.colored_label(
-                egui::Color32::LIGHT_YELLOW,
-                "Discord / GTA : micro = CABLE Output (VB-Cable). Ne pas sélectionner le fifine directement.",
-            );
-            ui.add_space(8.0);
+        ctx.request_repaint_after(Duration::from_millis(100));
 
+        egui::CentralPanel::default().show(ctx, |ui| {
             device_combo(
                 ui,
                 "Micro (entrée)",
@@ -215,11 +264,6 @@ impl eframe::App for SettingsApp {
                         .logarithmic(false),
                 );
             });
-            ui.label(
-                egui::RichText::new("128 = latence minimale. Augmenter si crackling.")
-                    .small()
-                    .weak(),
-            );
 
             if !self.status.is_empty() {
                 ui.add_space(8.0);
@@ -241,14 +285,6 @@ impl eframe::App for SettingsApp {
                 if ui.button(routing_label).clicked() {
                     self.toggle_routing();
                 }
-                let status = if self.draft.enabled {
-                    egui::RichText::new("Routage actif")
-                        .color(egui::Color32::LIGHT_GREEN)
-                } else {
-                    egui::RichText::new("Routage désactivé")
-                        .color(egui::Color32::LIGHT_YELLOW)
-                };
-                ui.label(status);
             });
 
             ui.add_space(12.0);
@@ -263,14 +299,9 @@ impl eframe::App for SettingsApp {
                     self.quit(ctx);
                 }
             });
-            ui.label(
-                egui::RichText::new(
-                    "Désactiver : coupe le micro → VB-Cable. Appliquer : enregistre les réglages. Quitter : ferme MixMixer.",
-                )
-                .small()
-                .weak(),
-            );
         });
+
+        show_metrics_overlay(ctx, &self.metrics);
     }
 }
 
@@ -322,11 +353,12 @@ fn run_settings_window(
     config: Config,
     devices: DeviceLists,
     event_tx: Sender<AppEvent>,
+    metrics: Arc<AudioMetrics>,
 ) -> Result<()> {
     let native_options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size([480.0, 420.0])
-            .with_min_inner_size([400.0, 360.0])
+            .with_inner_size([480.0, 380.0])
+            .with_min_inner_size([400.0, 320.0])
             .with_active(true),
         event_loop_builder: Some(Box::new(|builder| {
             use winit::platform::windows::EventLoopBuilderExtWindows;
@@ -344,6 +376,7 @@ fn run_settings_window(
                 config.clone(),
                 devices.clone(),
                 event_tx,
+                metrics,
             )) as Box<dyn eframe::App>)
         }),
     )

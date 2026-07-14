@@ -1,6 +1,6 @@
 # Architecture audio
 
-> Schémas actuel vs cible. Options techniques pour soundboard + duplication micro.
+> Schémas historiques (options soundboard, rack) + **MixMixer v0.1** (solution retenue).
 
 ---
 
@@ -332,9 +332,9 @@ Un **FlowAudio Rack** — app dédiée avec matrice source × destination :
 
 ---
 
-## MixMixer — solution retenue (DEC-005)
+## MixMixer — solution retenue (DEC-005, simplifié DEC-006)
 
-App Rust tray minimaliste (`mix-mixer/`) qui remplace VoiceMeeter et Soundpad UniteFx pour l'injection soundboard.
+App Rust tray (`mix-mixer/`) — **v0.1 baseline** : routage micro post-E-APO → VB-Cable.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -348,26 +348,26 @@ App Rust tray minimaliste (`mix-mixer/`) qui remplace VoiceMeeter et Soundpad Un
                                 │
                     ┌───────────▼───────────┐
                     │      MixMixer         │
-                    │  capture + mix + sfx  │
+                    │  capture → CABLE In   │
                     └───────────┬───────────┘
                                 │
               ┌─────────────────┴─────────────────┐
               ▼                                   ▼
-    CABLE Input → CABLE Output          fifine SC3 (monitor)
-    (Discord / jeux / OBS)              (casque, défaut ON)
+    CABLE Input → CABLE Output          fifine SC3 (monitor opt.)
+    (Discord / GTA / OBS)
 
-CABLE Output ◄── capture ◄── apps externe (playback → CABLE Input)
-WAV hotkeys  ◄── player interne
+Apps / soundboard / navigateur → CABLE Input (mix Windows, hors MixMixer)
 ```
 
 | Pour | Contre |
 |------|--------|
-| Un seul exe tray, pas VoiceMeeter | Pas de matrice N×M (hors scope MVP) |
-| Voix post-E-APO + sfx WAV + VB-Cable | Validation manuelle Discord requise |
-| Monitor SC3 intégré | Redémarrage pour changer devices |
-| Latence ~15–35 ms estimée | Resampling si device ≠ 48 kHz |
+| Un exe tray, latence ~5 ms (buffer 128) | Pas de mix sfx interne (v0.1) |
+| Voix post-E-APO vers micro virtuel | Pas de matrice N×M |
+| Reconnexion auto + métriques UI | Monitor = stream séparé |
+| Pas de VoiceMeeter | Soundboard = apps → CABLE Input (mix OS) |
 
-**Setup :** voir [`mix-mixer/README.md`](../mix-mixer/README.md) et [`docs/dev-mix-mixer.md`](dev-mix-mixer.md).
+**Setup :** [`mix-mixer/README.md`](../mix-mixer/README.md), [`dev-mix-mixer.md`](dev-mix-mixer.md)  
+**Git baseline :** commit `8c50c7d` (2026-07-14)
 
 ---
 
@@ -375,19 +375,18 @@ WAV hotkeys  ◄── player interne
 
 | Besoin | Option privilégiée |
 |--------|-------------------|
-| **Injection soundboard + monitor (actuel)** | **MixMixer** — DEC-005 |
-| Tester vite, soundboard seule | ~~A — Soundpad~~ → MixMixer |
-| Dupliquer micro + mix propre | **C / E1** — VoiceMeeter Potato |
+| **Routage micro → Discord (actuel)** | **MixMixer v0.1** — DEC-005 / DEC-006 |
+| Soundboard mixée dans l'app | Évolution future ou apps → CABLE Input |
+| Dupliquer micro + mix complexe | **C / E1** — VoiceMeeter Potato |
 | Router tous les flux (rack) | **E1** — VoiceMeeter Potato, ou **E3** dev custom |
-| Contrôle total latence | **MixMixer** (WASAPI direct) |
+| Contrôle latence micro | **MixMixer** (WASAPI direct, buffer 128) |
 
 ---
 
-## Checklist latence
+## Checklist latence (MixMixer)
 
-- [ ] Soundboard locale (fichiers disque, pas URL web)
-- [ ] Soundpad lancé avant les apps vocales
-- [ ] Réduire chaîne VST (retirer 2e Limiter6, désactiver `Latency` sur Limiter6)
-- [ ] 48 kHz identique partout
+- [ ] `buffer_frames` 128 (ou 256/512 si crackling)
+- [ ] 48 kHz identique partout (fifine, CABLE, SC3)
+- [ ] Discord micro = CABLE Output (pas fifine)
+- [ ] Réduire chaîne VST si retard audible (Limiter6 latency)
 - [ ] Éviter « Écouter ce périphérique » Windows
-- [ ] VoiceMeeter buffers 128–512 si option C

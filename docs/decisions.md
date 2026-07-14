@@ -93,15 +93,36 @@
 
 **Statut :** accepté
 
-**Contexte :** Refus VoiceMeeter (trop lourd) ; besoin minimaliste mix voix post-E-APO + soundboard (WAV + VB-Cable) → micro virtuel + monitor casque.
+**Contexte :** Refus VoiceMeeter (trop lourd) ; besoin minimaliste micro post-E-APO → micro virtuel VB-Cable + monitor casque.
 
 **Décision :**
 - Implémenter **MixMixer** en Rust (`cpal` / WASAPI)
-- Sources : micro fifine (post-E-APO), CABLE Output, WAV hotkeys
-- Sorties : CABLE Input (Discord), fifine SC3 (monitor, défaut on)
-- Discord micro = CABLE Output ; désactiver Soundpad UniteFx
+- Capture : micro fifine (post-E-APO)
+- Sorties : CABLE Input (Discord), fifine SC3 (monitor)
+- Discord micro = CABLE Output
 
 **Conséquences :**
 - Code dans `d:\Audio\mix-mixer\`
 - Spec : `docs/dev-mix-mixer.md`
-- DEC-002/003/004 partiellement supersédés pour l'injection soundboard
+- DEC-002/003/004 partiellement supersédés pour le routage micro
+
+**Note :** Scope soundboard interne (WAV hotkeys) retiré — voir DEC-006.
+
+---
+
+### DEC-006 — MixMixer v0.1 : simplification routage voix seul (2026-07-14)
+
+**Statut :** accepté
+
+**Contexte :** MVP initial mixait voix + CABLE Output + WAV hotkeys. Problèmes : boucle écho CABLE, complexité, conflits Discord/GTA sur le micro.
+
+**Décision :**
+- **Retirer** : soundboard interne, hotkeys F1/F2, capture CABLE Output, deps `hound` / `global-hotkey`
+- **Conserver** : routage micro → CABLE Input, monitor SC3 optionnel, UI Réglages, tray
+- **Soundboard externe** : apps / navigateur → CABLE Input (mix Windows, séparé)
+- **Ajouter** : bouton Activer/Désactiver, reconnexion auto flux, métriques temps réel, release sans terminal
+
+**Conséquences :**
+- Baseline Git `8c50c7d`
+- Validation recentrée sur routage voix + reconnexion Discord/GTA
+- Évolutions futures documentées dans `dev-mix-mixer.md`

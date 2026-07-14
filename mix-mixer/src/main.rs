@@ -12,6 +12,7 @@ mod error;
 mod ui;
 
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 
@@ -20,6 +21,7 @@ use crossbeam_channel::{bounded, Receiver, Sender};
 use tracing::{error, info};
 
 use crate::audio::engine::{AudioCommand, AudioEngine};
+use crate::audio::metrics::AudioMetrics;
 use crate::config::Config;
 use crate::error::Result;
 use crate::ui::settings::SettingsLauncher;
@@ -71,19 +73,21 @@ fn run() -> Result<()> {
 
     let (cmd_tx, cmd_rx) = bounded::<AudioCommand>(64);
     let (event_tx, event_rx) = bounded::<AppEvent>(64);
+    let metrics = Arc::new(AudioMetrics::new());
 
     let config_for_audio = config.clone();
+    let metrics_for_audio = Arc::clone(&metrics);
     let audio_handle = thread::Builder::new()
         .name("mix-mixer-audio".into())
         .spawn(move || {
-            if let Err(err) = run_audio_thread(config_for_audio, cmd_rx) {
+            if let Err(err) = run_audio_thread(config_for_audio, cmd_rx, metrics_for_audio) {
                 error!(%err, "audio thread failed");
             }
         })
         .map_err(|e| crate::error::Error::Audio(format!("spawn audio thread: {e}")))?;
 
     let tray = TrayManager::new(event_tx.clone())?;
-    let settings = SettingsLauncher::new(event_tx.clone());
+    let settings = SettingsLauncher::new(event_tx.clone(), metrics);
 
     if let Err(err) = settings.open(config_path.clone(), &config) {
         error!(%err, "open settings on startup failed");
@@ -105,8 +109,12 @@ fn run() -> Result<()> {
     Ok(())
 }
 
-fn run_audio_thread(config: Config, cmd_rx: Receiver<AudioCommand>) -> Result<()> {
-    let mut engine = AudioEngine::new(config)?;
+fn run_audio_thread(
+    config: Config,
+    cmd_rx: Receiver<AudioCommand>,
+    metrics: Arc<AudioMetrics>,
+) -> Result<()> {
+    let mut engine = AudioEngine::new(config, metrics)?;
     engine.run(cmd_rx)
 }
 
