@@ -1,0 +1,17 @@
+{
+  "sample_rate": 48000,
+  "buffer_frames": 128,
+  "devices": {
+    "voice_input": "fifine Microphone",
+    "virtual_mic_output": "CABLE Input",
+    "monitor_output": "fifine SC3"
+  },
+  "gains": {
+    "voice": 1.0,
+    "master": 1.0
+  },
+  "monitor": {
+    "enabled": true
+  },
+  "enabled": true
+}

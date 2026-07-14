@@ -1,0 +1,11 @@
+# Rust build
+mix-mixer/target/
+
+# Binaires locaux
+*.exe
+*.pdb
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.cursor/
