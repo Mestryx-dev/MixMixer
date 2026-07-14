@@ -119,11 +119,13 @@ fn simple_tray_rgba() -> Vec<u8> {
     for y in 0..16 {
         for x in 0..16 {
             let i = (y * 16 + x) * 4;
-            rgba[i] = 64;
-            rgba[i + 1] = 128;
+            rgba[i] = 79;
+            rgba[i + 1] = 140;
             rgba[i + 2] = 255;
-            rgba[i + 3] = if (3..13).contains(&x) && (3..13).contains(&y) {
+            rgba[i + 3] = if (4..12).contains(&x) && (4..12).contains(&y) {
                 255
+            } else if (3..13).contains(&x) && (3..13).contains(&y) {
+                180
             } else {
                 0
             };
