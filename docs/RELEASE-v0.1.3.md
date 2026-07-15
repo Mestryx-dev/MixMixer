@@ -18,7 +18,7 @@ Zero-config release: AppData settings with smart first-run defaults.
 
 Reset config anytime by deleting `%APPDATA%\MixMixer\config.json` and relaunching.
 
-Full walkthrough: [docs/TUTORIAL.md](TUTORIAL.md)
+Full walkthrough: [docs/TUTORIAL.md](https://github.com/Mestryx-dev/MixMixer/blob/main/docs/TUTORIAL.md)
 
 ## Upgrade from v0.1.2
 

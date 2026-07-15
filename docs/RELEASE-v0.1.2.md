@@ -17,7 +17,7 @@ UI polish release: tray behavior, settings header language chips, footer GitHub 
 3. A default config is created at `%APPDATA%\MixMixer\config.json` — check devices in Settings.
 4. Set Discord (and games/OBS) microphone to **CABLE Output**.
 
-Full walkthrough: [docs/TUTORIAL.md](TUTORIAL.md)
+Full walkthrough: [docs/TUTORIAL.md](https://github.com/Mestryx-dev/MixMixer/blob/main/docs/TUTORIAL.md)
 
 > **Note:** Newer builds auto-create AppData config. Older zip contents may still ship `config.example.json` as a reference only.
 
