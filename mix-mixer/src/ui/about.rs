@@ -1,13 +1,16 @@
+use std::path::Path;
+
 use crate::i18n::Locale;
 
 /// Native About dialog (Windows).
-pub fn show_about(locale: Locale) {
+pub fn show_about(locale: Locale, config_path: &Path) {
     let texts = locale.texts();
     let body = format!(
-        "{}\n\nVersion {}\n{}",
+        "{}\n\nVersion {}\n{}\n\nConfig:\n{}",
         texts.about_description,
         env!("CARGO_PKG_VERSION"),
         texts.about_url,
+        config_path.display(),
     );
     show_message_box(texts.about_title, &body);
 }

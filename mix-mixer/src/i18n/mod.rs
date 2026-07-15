@@ -42,6 +42,16 @@ impl Locale {
         Self::default()
     }
 
+    /// Best effort UI language for a newly created config (`MIXMIXER_LANG`, then system, then English).
+    pub fn from_system() -> Self {
+        if let Ok(env) = std::env::var("MIXMIXER_LANG") {
+            if let Some(locale) = Self::parse(&env) {
+                return locale;
+            }
+        }
+        system_ui_locale().unwrap_or_default()
+    }
+
     /// Return the string table for this locale.
     pub fn texts(&self) -> &'static UiText {
         match self {
@@ -76,6 +86,37 @@ impl Locale {
 
     /// All supported locales (for dropdown menus).
     pub const ALL: [Locale; 2] = [Self::En, Self::Fr];
+}
+
+#[cfg(windows)]
+fn system_ui_locale() -> Option<Locale> {
+    use windows_sys::Win32::Globalization::GetUserDefaultLocaleName;
+
+    let mut buf = [0u16; 85];
+    let len = unsafe { GetUserDefaultLocaleName(buf.as_mut_ptr(), buf.len() as i32) };
+    if len <= 1 {
+        return None;
+    }
+    let name = String::from_utf16_lossy(&buf[..(len as usize - 1)]);
+    if name.to_ascii_lowercase().starts_with("fr") {
+        Some(Locale::Fr)
+    } else if name.to_ascii_lowercase().starts_with("en") {
+        Some(Locale::En)
+    } else {
+        None
+    }
+}
+
+#[cfg(not(windows))]
+fn system_ui_locale() -> Option<Locale> {
+    for key in ["LC_ALL", "LANG"] {
+        if let Ok(val) = std::env::var(key) {
+            if let Some(locale) = Locale::parse(val.split(['.', '_']).next().unwrap_or(&val)) {
+                return Some(locale);
+            }
+        }
+    }
+    None
 }
 
 /// All user-visible UI strings for a locale.

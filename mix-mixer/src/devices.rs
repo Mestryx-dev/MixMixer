@@ -17,6 +17,49 @@ pub fn enumerate_device_lists() -> Result<DeviceLists> {
     Ok(DeviceLists { inputs, outputs })
 }
 
+/// Prefer Windows default mic, VB-Cable input, and a non-cable output for monitor.
+pub fn suggest_default_devices() -> Result<(String, String, String)> {
+    let host = default_host();
+    let lists = enumerate_device_lists()?;
+
+    let voice_input = host
+        .default_input_device()
+        .and_then(|d| d.name().ok())
+        .map(|n| stable_device_query(&n))
+        .or_else(|| lists.inputs.first().cloned())
+        .unwrap_or_else(|| "Microphone".to_string());
+
+    let virtual_mic_output = lists
+        .outputs
+        .iter()
+        .find(|name| is_cable_input(name))
+        .cloned()
+        .map(|n| stable_device_query(&n))
+        .unwrap_or_else(|| "CABLE Input".to_string());
+
+    let monitor_output = host
+        .default_output_device()
+        .and_then(|d| d.name().ok())
+        .filter(|name| !is_cable_input(name))
+        .map(|n| stable_device_query(&n))
+        .or_else(|| {
+            lists
+                .outputs
+                .iter()
+                .find(|name| !is_cable_input(name))
+                .cloned()
+                .map(|n| stable_device_query(&n))
+        })
+        .unwrap_or_default();
+
+    Ok((voice_input, virtual_mic_output, monitor_output))
+}
+
+fn is_cable_input(name: &str) -> bool {
+    let lower = name.to_lowercase();
+    lower.contains("cable") && lower.contains("input")
+}
+
 fn collect_device_names(devices: impl Iterator<Item = Device>) -> Result<Vec<String>> {
     let mut names = Vec::new();
     for device in devices {

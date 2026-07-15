@@ -28,12 +28,13 @@ External soundboard / browser ──► CABLE Input (separate app; Windows mixes
 
 - Low-latency WASAPI capture and playback (Rust + cpal)
 - iOS-style settings window (egui) with live latency metrics
-- System tray: **double-click** opens settings; **right-click** → About / Quit
-- Hide to tray on close or minimize (does not quit)
+- System tray: **left-click or double-click** opens settings; **right-click** → About / Quit
+- Hide to tray on close or minimize (does not quit); taskbar click restores the window
 - Toast feedback on Apply; GitHub link in the footer
 - EN / FR language chips in the header (`locale` in config or `MIXMIXER_LANG`)
 - Auto-reconnect when Windows audio devices change (e.g. Discord switching devices)
 - Optional headphone monitor bus
+- Settings stored in `%APPDATA%\MixMixer\config.json` — created automatically on first run
 
 ## Requirements
 
@@ -48,72 +49,69 @@ External soundboard / browser ──► CABLE Input (separate app; Windows mixes
 
 ### Download (recommended)
 
-Download the latest **Windows x64** build from [Releases](https://github.com/Mestryx-dev/MixMixer/releases).
+1. Download the latest **Windows x64** build from [Releases](https://github.com/Mestryx-dev/MixMixer/releases).
+2. Install [VB-Audio Virtual Cable](https://vb-audio.com/Cable/) if needed.
+3. Run `mix-mixer.exe` — a default config is created at `%APPDATA%\MixMixer\config.json` (system mic + **CABLE Input** when present).
+4. Confirm devices in the settings window, then set Discord / games / OBS microphone to **CABLE Output**.
 
-Extract the zip, copy `config.example.json` → `config.json`, then continue from **Configure** below.
+No manual `config.json` copy is required.
 
-### 1. Build from source
+### Build from source
 
 ```powershell
 cd mix-mixer
 cargo build --release
+.\target\release\mix-mixer.exe
 ```
 
-Binary: `mix-mixer\target\release\mix-mixer.exe`
+### Wire your apps
 
-### 2. Configure
-
-```powershell
-copy config.example.json config.json
-.\target\release\mix-mixer.exe --list-devices
-```
-
-Edit `config.json` — device names use **case-insensitive substring** matching.
-
-### 3. Wire your apps
-
-1. **Equalizer APO** → physical microphone (e.g. fifine).
+1. **Equalizer APO** → physical microphone (optional).
 2. **MixMixer** → captures that mic, outputs to **CABLE Input**.
 3. **Discord / GTA / OBS** → microphone = **CABLE Output**.
-
-### 4. Run
-
-Place `mix-mixer.exe` next to `config.json` and launch. The settings window opens on startup; double-click the tray icon to reopen it. Closing the window hides it to the tray.
 
 Full walkthrough: [docs/TUTORIAL.md](docs/TUTORIAL.md)
 
 ## Configuration
 
+User settings live in:
+
+```
+%APPDATA%\MixMixer\config.json
+```
+
+Created automatically on first launch with detected defaults. Print the path:
+
+```powershell
+.\mix-mixer.exe --print-config-path
+```
+
+Optional override: `.\mix-mixer.exe --config D:\path\to\config.json`
+
 | Key | Default | Description |
 |-----|---------|-------------|
-| `locale` | `en` | UI language: `en` or `fr` (overridden by `MIXMIXER_LANG`) |
-| `devices.voice_input` | — | Capture device (post-E-APO mic) |
-| `devices.virtual_mic_output` | — | VB-Cable input endpoint |
-| `devices.monitor_output` | — | Headphone monitor output |
+| `locale` | system / `en` | UI language: `en` or `fr` (overridden by `MIXMIXER_LANG`) |
+| `devices.voice_input` | Windows default mic | Capture device (post-E-APO mic) |
+| `devices.virtual_mic_output` | `CABLE Input` when found | VB-Cable input endpoint |
+| `devices.monitor_output` | default output | Headphone monitor output |
 | `gains.voice` / `gains.master` | `1.0` | Level multipliers |
 | `monitor.enabled` | `false` | Headphone monitor on/off |
 | `buffer_frames` | `128` | ~2.7 ms @ 48 kHz; increase if crackling |
 | `enabled` | `true` | Start with routing active |
 | `sample_rate` | `48000` | Sample rate (Hz) |
 
-See [`mix-mixer/config.example.json`](mix-mixer/config.example.json).
+Device names use **case-insensitive substring** matching. Reference schema: [`mix-mixer/config.example.json`](mix-mixer/config.example.json).
 
 ### Language
 
-Use the **FR** / **EN** chips in the settings header, or set in `config.json`:
-
-```json
-"locale": "fr"
-```
-
-Or override at runtime:
+Use the **FR** / **EN** chips in the settings header, or edit `locale` in the AppData config. Runtime override:
 
 ```powershell
 $env:MIXMIXER_LANG = "fr"
 .\mix-mixer.exe
 ```
 
-All UI strings live in [`mix-mixer/src/i18n/`](mix-mixer/src/i18n/) — add a new locale file and match arm in `Locale` to extend.
+All UI strings live in [`mix-mixer/src/i18n/`](mix-mixer/src/i18n/).
 
 ## Settings window
 
@@ -134,7 +132,8 @@ All UI strings live in [`mix-mixer/src/i18n/`](mix-mixer/src/i18n/) — add a ne
 
 | Action | Effect |
 |--------|--------|
-| Double-click icon | Open settings |
+| Left-click or double-click icon | Open / restore settings |
+| Click taskbar window icon (when minimized) | Restore settings |
 | Right-click → About | Show about dialog |
 | Right-click → Quit | Exit MixMixer |
 
@@ -143,9 +142,10 @@ All UI strings live in [`mix-mixer/src/i18n/`](mix-mixer/src/i18n/) — add a ne
 | Issue | Fix |
 |-------|-----|
 | Crackling / dropouts | Raise `buffer_frames` to 256 or 512 |
-| Device not found | Run `--list-devices`, adjust substring in config |
+| Device not found | Run `--list-devices`, edit `%APPDATA%\MixMixer\config.json` |
 | Discord silent | Mic = **CABLE Output**; routing enabled in MixMixer |
 | Silence after Discord device change | Wait for auto-reconnect; do not pick physical mic in Discord |
+| Where is my config? | `mix-mixer.exe --print-config-path` or tray → About |
 | Debug logs | `$env:RUST_LOG='mix_mixer=info'; .\mix-mixer.exe` |
 
 ## Development

@@ -1,7 +1,7 @@
 # Documentation index — MixMixer / Audio
 
 > Entry point for agents: [`../agent.md`](../agent.md)  
-> **App version:** MixMixer **v0.1.2**  
+> **App version:** MixMixer **v0.1.3**  
 > **Public repo:** [github.com/Mestryx-dev/MixMixer](https://github.com/Mestryx-dev/MixMixer)
 
 ---
@@ -21,7 +21,7 @@
 |----------|---------|
 | [../README.md](../README.md) | Product overview, config reference, screenshot |
 | [TUTORIAL.md](TUTORIAL.md) | Step-by-step Windows setup |
-| [RELEASE-v0.1.2.md](RELEASE-v0.1.2.md) | Current release notes / install |
+| [RELEASE-v0.1.3.md](RELEASE-v0.1.3.md) | Current release notes / install |
 | [../CHANGELOG.md](../CHANGELOG.md) | Version history |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | How to contribute |
 | [images/settings-window.png](images/settings-window.png) | Settings UI screenshot |
@@ -32,7 +32,7 @@
 
 | Document | Content |
 |----------|---------|
-| [dev-mix-mixer.md](dev-mix-mixer.md) | Technical spec (MixMixer) |
+| [dev-mix-mixer.md](dev-mix-mixer.md) | Technical spec (UI, tray/Windows threading) |
 | [validate-mix-mixer.md](validate-mix-mixer.md) | Manual validation checklist |
 | [architecture.md](architecture.md) | Historical options + MixMixer flow |
 | [decisions.md](decisions.md) | ADR journal (DEC-001 …) |
@@ -71,7 +71,7 @@ Audio/
 └── docs/
     ├── index.md              ← this file
     ├── TUTORIAL.md
-    ├── RELEASE-v0.1.2.md
+    ├── RELEASE-v0.1.3.md
     ├── images/
     │   └── settings-window.png
     └── … internal notes …

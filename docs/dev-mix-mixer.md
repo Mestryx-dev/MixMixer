@@ -1,4 +1,4 @@
-# MixMixer — spec technique v0.1
+# MixMixer — spec technique v0.1.2
 
 > App WASAPI Rust — micro post-E-APO → VB-Cable, latence minimale.  
 > Décisions : **DEC-005**, **DEC-006** dans [decisions.md](decisions.md)
@@ -67,9 +67,23 @@ Voir [`mix-mixer/config.example.json`](../mix-mixer/config.example.json).
 
 ### Fenêtre Réglages
 
-- Titre fenêtre : « MixMixer — Réglages » (pas de heading interne)
-- Boutons : Appliquer, Annuler, Activer/Désactiver, Quitter
-- Overlay métriques bas droite (refresh ~100 ms)
+- Titre fenêtre : « MixMixer — Réglages » / « MixMixer — Settings »
+- Header : métriques live + puces FR / EN
+- Sections : GENERAL (routage), DEVICES, AUDIO (monitor, gains, buffer)
+- Footer : Appliquer / Annuler + version cliquable (GitHub)
+- Toast court après Appliquer
+- Fermer (×) ou minimiser → **hide to tray** (pas de quit)
+
+### Tray
+
+| Action | Effet |
+|--------|--------|
+| Clic gauche **ou** double-clic | Rouvrir les réglages |
+| Clic droit → À propos / About | Dialog native Windows |
+| Clic droit → Quitter / Quit | Arrêt de l'app |
+| Clic barre des tâches (fenêtre minimisée) | Restaurer les réglages |
+
+Menu tray volontairement minimal (plus d'« Écoute », « Recharger », « Réglages » dans le menu).
 
 ### Métriques
 
@@ -77,7 +91,6 @@ Voir [`mix-mixer/config.example.json`](../mix-mixer/config.example.json).
 |----------|--------|
 | Délai estimé | `2 × buffer_frames / sample_rate × 1000` ms |
 | Buffer % | `voice_rb.available() / capacity` |
-| Flux actifs | Nombre de streams cpal ouverts |
 | État | actif / reconnexion / off |
 
 ---
@@ -85,10 +98,21 @@ Voir [`mix-mixer/config.example.json`](../mix-mixer/config.example.json).
 ## Threading
 
 ```
-Main thread     : event loop (tray, settings events)
+Main thread     : boucle AppEvent (audio cmds, About MessageBox, Quit)
 Audio thread    : AudioEngine (cpal streams, reconnect)
-Settings thread : eframe UI (winit any_thread)
+Settings thread : eframe/winit + TrayHandle (any_thread Windows)
 ```
+
+### Tray sur Windows (critique)
+
+`tray-icon` exige un **event loop Win32** sur le thread qui possède l'icône. Chez MixMixer :
+
+1. `TrayHandle` est créé dans le callback `eframe::run_native` (même thread winit).
+2. `TrayIconEvent::set_event_handler` restaure la fenêtre tout de suite (`Visible` / `Minimized(false)` / `Focus`) — la boucle egui peut être inactive quand la fenêtre est minimisée.
+3. `MenuEvent` (About / Quit) est pollé dans `SettingsApp::update` et renvoyé vers `AppEvent`.
+4. La minimisation utilise `ViewportCommand::Minimized(true)` ; la restauration barre des tâches détecte la transition `minimized true → false`.
+
+**Ne pas** créer le tray sur le thread main (poll + sleep) : les événements tray/menu n'arrivent jamais.
 
 ---
 

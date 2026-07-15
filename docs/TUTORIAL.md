@@ -34,48 +34,26 @@ If they are missing, reinstall VB-Cable as administrator.
 
 MixMixer captures **after** E-APO processing on the same device name.
 
-## Step 3 — Create config.json
+## Step 3 — First launch (config is automatic)
 
-In the folder containing `mix-mixer.exe`:
+Just run `mix-mixer.exe`. On first start MixMixer creates:
+
+```
+%APPDATA%\MixMixer\config.json
+```
+
+Defaults are filled from your PC:
+
+- **Microphone** → Windows default input device  
+- **Virtual mic** → `CABLE Input` when VB-Cable is installed  
+- **Monitor** → Windows default playback (non-cable)  
+- **Language** → system UI language when `en` / `fr` is detected  
+
+Open settings and adjust devices if needed. List all devices:
 
 ```powershell
-copy config.example.json config.json
 mix-mixer.exe --list-devices
-```
-
-Example output (names vary by machine):
-
-```
-INPUT:
-  fifine Microphone
-  CABLE Output
-OUTPUT:
-  CABLE Input
-  fifine SC3
-  Speakers
-```
-
-Edit `config.json`:
-
-```json
-{
-  "locale": "en",
-  "sample_rate": 48000,
-  "buffer_frames": 128,
-  "devices": {
-    "voice_input": "fifine Microphone",
-    "virtual_mic_output": "CABLE Input",
-    "monitor_output": "fifine SC3"
-  },
-  "gains": {
-    "voice": 1.0,
-    "master": 1.0
-  },
-  "monitor": {
-    "enabled": false
-  },
-  "enabled": true
-}
+mix-mixer.exe --print-config-path
 ```
 
 Device names are **substring matches** — `"fifine"` works if only one device contains that text.
@@ -95,10 +73,11 @@ Same for GTA voice chat, OBS audio input, etc.
 ```
 
 - Settings window opens automatically.
-- Tray icon appears; **double-click** to reopen settings.
+- Tray icon appears; **left-click or double-click** to reopen settings.
 - Header shows **Active**, latency in ms, and buffer fill when routing works.
 - **FR** / **EN** chips under the metrics switch the UI language.
 - Closing the window (×) or minimizing **hides to tray** — MixMixer keeps running.
+- Clicking the minimized app on the **taskbar** also restores the settings window.
 
 Click **Apply** after changing devices or gains. A short toast confirms; the window stays open.
 
@@ -116,7 +95,8 @@ Configure your soundboard app to output to **CABLE Input**. Windows mixes soundb
 
 | Action | Effect |
 |--------|--------|
-| Double-click tray icon | Open settings |
+| Left-click or double-click tray icon | Open / restore settings |
+| Click taskbar window icon (when minimized) | Restore settings |
 | Right-click → About | Show about dialog (version + project link) |
 | Right-click → Quit | Exit MixMixer |
 
@@ -160,7 +140,7 @@ $env:MIXMIXER_LANG = "fr"
 ## Uninstall / reset
 
 1. Quit MixMixer from the tray menu (right-click → Quit).
-2. Delete `config.json` or restore from `config.example.json`.
+2. Delete `%APPDATA%\MixMixer\config.json` to reset to auto-defaults on next launch.
 3. VB-Cable can stay installed for other apps.
 
 ## Next steps

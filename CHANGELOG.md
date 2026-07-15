@@ -5,6 +5,17 @@ All notable changes to MixMixer are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2026-07-15
+
+### Changed
+
+- Default config path is `%APPDATA%\MixMixer\config.json` (created automatically on first run)
+- First-run defaults use the Windows default microphone, **CABLE Input** when present, and system UI language when possible
+- Manual copy of `config.example.json` is no longer required for end users
+- Added `--print-config-path`; `--config` is an optional override
+- About dialog shows the active config path
+- Quick start / tutorial updated for zero-config double-click launch
+
 ## [0.1.2] - 2026-07-15
 
 ### Added
@@ -17,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Tray menu simplified to **About** and **Quit** (double-click opens settings)
+- Tray menu simplified to **About** and **Quit** (left-click or double-click opens settings)
 - Closing or minimizing the settings window hides to tray instead of quitting
 - GENERAL section: routing toggle only (language moved to header)
 - Subtle rounded hover overlay on interactive rows
@@ -25,7 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Tray double-click could fail to reopen the settings window (left-click was opening the menu)
+- Settings window could not be reopened from the tray after minimize/close (tray must live on the egui/winit thread; restore uses direct viewport commands)
+- Taskbar click on a minimized settings window did not restore reliably
 - Duplicate horizontal separator above the settings footer
 - Window height / clipping so footer and buffer hint stay visible
 
@@ -60,6 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Device substring matching and `--list-devices` CLI
 - Live latency and buffer metrics in settings UI
 
+[0.1.3]: https://github.com/Mestryx-dev/MixMixer/releases/tag/v0.1.3
 [0.1.2]: https://github.com/Mestryx-dev/MixMixer/releases/tag/v0.1.2
 [0.1.1]: https://github.com/Mestryx-dev/MixMixer/releases/tag/v0.1.1
 [0.1.0]: https://github.com/Mestryx-dev/MixMixer/releases/tag/v0.1.0

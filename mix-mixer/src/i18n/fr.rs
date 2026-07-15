@@ -30,7 +30,7 @@ pub const TEXTS: UiText = UiText {
     window_title: "MixMixer — Réglages",
     tray_about: "À propos de MixMixer…",
     tray_quit: "Quitter",
-    tray_tooltip: "MixMixer — double-clic : réglages | clic droit : menu",
+    tray_tooltip: "MixMixer — clic : réglages | clic droit : menu",
     about_title: "À propos de MixMixer",
     about_description: "Route le micro post-E-APO vers VB-Cable avec une latence minimale.",
     about_url: "https://github.com/Mestryx-dev/MixMixer",

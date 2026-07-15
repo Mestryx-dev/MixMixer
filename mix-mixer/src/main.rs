@@ -36,11 +36,16 @@ use crate::ui::tray::TrayAction;
     about = "Forward microphone to VB-Cable virtual mic"
 )]
 struct Cli {
-    #[arg(short, long, default_value = "config.json")]
-    config: PathBuf,
+    /// Override config path (default: `%APPDATA%\MixMixer\config.json`).
+    #[arg(short, long, value_name = "PATH")]
+    config: Option<PathBuf>,
 
     #[arg(long)]
     list_devices: bool,
+
+    /// Print the resolved config path and exit.
+    #[arg(long)]
+    print_config_path: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -74,9 +79,22 @@ fn run() -> Result<()> {
         return Ok(());
     }
 
-    let config_path = cli.config.clone();
-    let mut config = Config::load(&config_path)?;
-    info!(path = %config_path.display(), "config loaded");
+    let config_path = match cli.config {
+        Some(path) => path,
+        None => Config::default_path()?,
+    };
+
+    if cli.print_config_path {
+        println!("{}", config_path.display());
+        return Ok(());
+    }
+
+    let (mut config, created) = Config::load_or_create(&config_path)?;
+    if created {
+        info!(path = %config_path.display(), "using newly created default config");
+    } else {
+        info!(path = %config_path.display(), "config loaded");
+    }
 
     let (cmd_tx, cmd_rx) = bounded::<AudioCommand>(64);
     let (event_tx, event_rx) = bounded::<AppEvent>(64);
@@ -133,7 +151,7 @@ fn run_event_loop(
                     }
                 }
                 AppEvent::Tray(TrayAction::About) => {
-                    about::show_about(config.locale);
+                    about::show_about(config.locale, config_path);
                 }
                 AppEvent::SettingsApplied(new_cfg) => {
                     let old_cfg = config.clone();

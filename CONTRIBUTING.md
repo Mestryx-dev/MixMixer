@@ -11,10 +11,12 @@ Thank you for your interest in contributing. MixMixer is a Windows audio routing
 
    ```powershell
    cd mix-mixer
-   copy config.example.json config.json
-   cargo run -- --list-devices
    cargo run
+   cargo run -- --list-devices
+   cargo run -- --print-config-path
    ```
+
+   A default config is written to `%APPDATA%\MixMixer\config.json` on first run.
 
 ## Project layout
 
@@ -29,7 +31,7 @@ Thank you for your interest in contributing. MixMixer is a Windows audio routing
 
 - **Scope**: Keep pull requests focused on one change.
 - **Language**: User-facing docs and new code comments in **English**. UI strings go in `src/i18n/`.
-- **Config**: Never commit `config.json` — only `config.example.json`.
+- **Config**: Never commit user configs. Ship schema examples as `config.example.json` only.
 - **Style**: Match existing Rust patterns; run `cargo fmt` and `cargo clippy` before submitting.
 - **Testing**: Describe manual audio tests in the PR (Discord + VB-Cable chain).
 
