@@ -3,6 +3,7 @@ use tray_icon::menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem};
 use tray_icon::{MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent};
 
 use crate::error::{Error, Result};
+use crate::i18n::Locale;
 use crate::AppEvent;
 
 #[derive(Debug, Clone, Copy)]
@@ -19,12 +20,13 @@ pub struct TrayManager {
 }
 
 impl TrayManager {
-    pub fn new(event_tx: Sender<AppEvent>) -> Result<Self> {
+    pub fn new(event_tx: Sender<AppEvent>, locale: Locale) -> Result<Self> {
+        let texts = locale.texts();
         let menu = Menu::new();
-        let settings_item = MenuItem::new("Réglages...", true, None);
-        let monitor_item = MenuItem::new("Activer/désactiver écoute", true, None);
-        let reload_item = MenuItem::new("Recharger config", true, None);
-        let quit_item = MenuItem::new("Quitter", true, None);
+        let settings_item = MenuItem::new(texts.tray_settings, true, None);
+        let monitor_item = MenuItem::new(texts.tray_toggle_monitor, true, None);
+        let reload_item = MenuItem::new(texts.tray_reload, true, None);
+        let quit_item = MenuItem::new(texts.tray_quit, true, None);
 
         menu.append(&settings_item)
             .map_err(|e| Error::Tray(format!("menu append: {e}")))?;
@@ -44,7 +46,7 @@ impl TrayManager {
 
         let tray = TrayIconBuilder::new()
             .with_menu(Box::new(menu))
-            .with_tooltip("MixMixer — double-clic : Réglages")
+            .with_tooltip(texts.tray_tooltip)
             .with_icon(icon)
             .build()
             .map_err(|e| Error::Tray(format!("tray build: {e}")))?;
@@ -114,6 +116,7 @@ impl TrayManager {
     }
 }
 
+/// Simple 16×16 tray icon (blue square with inner highlight).
 fn simple_tray_rgba() -> Vec<u8> {
     let mut rgba = vec![0u8; 16 * 16 * 4];
     for y in 0..16 {

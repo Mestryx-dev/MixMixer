@@ -1,6 +1,9 @@
 # Rust build
 mix-mixer/target/
 
+# Local user config (device names vary per machine)
+mix-mixer/config.json
+
 # Binaires locaux
 *.exe
 *.pdb

@@ -1,4 +1,4 @@
-//! MixMixer — micro post-E-APO → VB-Cable (latence minimale).
+//! MixMixer — routes post-E-APO microphone audio to VB-Cable with minimal latency.
 
 #![cfg_attr(
     all(not(debug_assertions), target_os = "windows"),
@@ -9,6 +9,7 @@ mod audio;
 mod config;
 mod devices;
 mod error;
+mod i18n;
 mod ui;
 
 use std::path::PathBuf;
@@ -24,6 +25,7 @@ use crate::audio::engine::{AudioCommand, AudioEngine};
 use crate::audio::metrics::AudioMetrics;
 use crate::config::Config;
 use crate::error::Result;
+use crate::i18n::Locale;
 use crate::ui::settings::SettingsLauncher;
 use crate::ui::tray::{TrayAction, TrayManager};
 
@@ -86,14 +88,15 @@ fn run() -> Result<()> {
         })
         .map_err(|e| crate::error::Error::Audio(format!("spawn audio thread: {e}")))?;
 
-    let tray = TrayManager::new(event_tx.clone())?;
+    let locale = Locale::resolve(Some(config.locale.code()));
+    let tray = TrayManager::new(event_tx.clone(), locale)?;
     let settings = SettingsLauncher::new(event_tx.clone(), metrics);
 
     if let Err(err) = settings.open(config_path.clone(), &config) {
         error!(%err, "open settings on startup failed");
     }
 
-    info!("mix-mixer running — micro → VAC");
+    info!("mix-mixer running — voice → virtual cable");
 
     run_event_loop(
         &config_path,

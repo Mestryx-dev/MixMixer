@@ -4,6 +4,7 @@ use eframe::egui::{
 };
 
 use crate::audio::metrics::MetricsSnapshot;
+use crate::i18n::UiText;
 
 pub struct Theme;
 
@@ -24,12 +25,37 @@ impl Theme {
     pub const ROW_HOVER: Color32 = Color32::from_rgba_premultiplied(255, 255, 255, 14);
 
     pub const WINDOW_W: f32 = 480.0;
-    pub const WINDOW_H: f32 = 680.0;
-    pub const WINDOW_MIN_H: f32 = 600.0;
+
+    pub const HEADER_BODY_H: f32 = 38.0;
+    pub const HEADER_FRAME_V: f32 = 20.0;
+    pub const FOOTER_BODY_H: f32 = 36.0;
+    pub const FOOTER_FRAME_V: f32 = 24.0;
+
+    pub const SECTION_FIRST_H: f32 = 33.0;
+    pub const SECTION_NEXT_H: f32 = 41.0;
+    pub const SECTION_FOOTER_H: f32 = 21.0;
+    pub const STATUS_BANNER_H: f32 = 52.0;
+
+    pub fn header_height() -> f32 {
+        Self::HEADER_BODY_H + Self::HEADER_FRAME_V
+    }
+
+    pub fn footer_height() -> f32 {
+        Self::FOOTER_BODY_H + Self::FOOTER_FRAME_V
+    }
+
+    /// Client height sized to fit all rows without scrolling.
+    pub fn window_height(show_status: bool) -> f32 {
+        let central = Self::SECTION_FIRST_H + Self::ROW_H
+            + Self::SECTION_NEXT_H + Self::ROW_H * 3.0 + 2.0
+            + Self::SECTION_NEXT_H + Self::ROW_H + (Self::ROW_H + 1.0) * 3.0 + Self::SECTION_FOOTER_H;
+        let status = if show_status { Self::STATUS_BANNER_H } else { 0.0 };
+        Self::header_height() + central + status + Self::footer_height()
+    }
 
     pub const INSET: f32 = 16.0;
     pub const ROW_H: f32 = 44.0;
-    /// Colonne label alignée sur toutes les lignes (toggle, picker, slider).
+    /// Label column width shared by toggle, picker, and slider rows.
     pub const ROW_LABEL_W: f32 = 120.0;
     pub const ROW_VALUE_W: f32 = 36.0;
     pub const ROW_GAP: f32 = 10.0;
@@ -37,8 +63,6 @@ impl Theme {
     pub const SLIDER_THUMB_R: f32 = 8.0;
     pub const SLIDER_TRACK_BG: Color32 = Color32::from_rgb(60, 60, 64);
     pub const GROUP_RADIUS: f32 = 12.0;
-    pub const HEADER_H: f32 = 68.0;
-    pub const FOOTER_H: f32 = 60.0;
     pub const SWITCH_W: f32 = 51.0;
     pub const SWITCH_H: f32 = 31.0;
 
@@ -101,18 +125,18 @@ fn chevron() -> egui::RichText {
     egui::RichText::new("›").size(22.0).color(Theme::CHEVRON)
 }
 
-pub fn header(ui: &mut Ui, snap: &MetricsSnapshot) {
-    ui.set_min_height(Theme::HEADER_H - 24.0);
+pub fn header(ui: &mut Ui, snap: &MetricsSnapshot, texts: &UiText) {
+    ui.set_min_height(Theme::HEADER_BODY_H);
     ui.vertical(|ui| {
         ui.horizontal(|ui| {
             ui.label(body_text("MixMixer").strong().size(17.0));
             ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
                 let (label, color) = if snap.routing_live {
-                    ("Actif", Theme::GREEN)
+                    (texts.status_active, Theme::GREEN)
                 } else if snap.reconnect_pending {
-                    ("Reconnexion", Theme::WARNING)
+                    (texts.status_reconnecting, Theme::WARNING)
                 } else {
-                    ("Inactif", Theme::TEXT_SECONDARY)
+                    (texts.status_inactive, Theme::TEXT_SECONDARY)
                 };
                 ui.label(
                     egui::RichText::new(format!(
@@ -125,7 +149,7 @@ pub fn header(ui: &mut Ui, snap: &MetricsSnapshot) {
             });
         });
         ui.add_space(4.0);
-        ui.label(caption_text("Réglages audio"));
+        ui.label(caption_text(texts.header_subtitle));
     });
 }
 
@@ -410,13 +434,13 @@ pub fn slider_block(
     });
 }
 
-pub fn buffer_block(ui: &mut Ui, first: bool, value: &mut u32) {
+pub fn buffer_block(ui: &mut Ui, first: bool, value: &mut u32, label: &str) {
     if !first {
         inset_separator(ui);
     }
 
     list_row(ui, Theme::ROW_H, |ui| {
-        row_label_cell(ui, "Buffer (latence)");
+        row_label_cell(ui, label);
         ui.add_space(Theme::ROW_GAP);
         let slider_w = slider_area_width(ui);
         ios_inline_slider_buffer(ui, value, slider_w);

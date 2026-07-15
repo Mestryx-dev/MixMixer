@@ -3,9 +3,14 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 
 use crate::error::{Error, Result};
+use crate::i18n::Locale;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
+    /// UI language (`en` or `fr`). Overridden by `MIXMIXER_LANG` at runtime.
+    #[serde(default)]
+    pub locale: Locale,
+
     #[serde(default = "default_sample_rate")]
     pub sample_rate: u32,
 

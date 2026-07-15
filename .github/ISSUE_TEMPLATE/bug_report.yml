@@ -1,0 +1,85 @@
+name: Bug report
+description: Report a crash, silence, crackling, or routing issue
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Include device names and steps to reproduce when possible.
+        See the [tutorial](https://github.com/Mestryx-dev/MixMixer/blob/main/docs/TUTORIAL.md) for setup basics.
+
+  - type: dropdown
+    id: version
+    attributes:
+      label: MixMixer version
+      options:
+        - v0.1.1
+        - v0.1.0
+        - main / dev build
+        - Unknown
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Windows version
+      placeholder: "e.g. Windows 11 24H2"
+    validations:
+      required: true
+
+  - type: textarea
+    id: devices
+    attributes:
+      label: Audio devices (from `mix-mixer --list-devices`)
+      placeholder: |
+        voice_input: ...
+        virtual_mic_output: CABLE Input
+        Discord mic: CABLE Output
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Launch MixMixer with config.json
+        2. Open Discord
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs (optional)
+      description: Run with `$env:RUST_LOG='mix_mixer=info'; .\mix-mixer.exe`
+      render: shell
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: VB-Audio Virtual Cable is installed
+          required: true
+        - label: Discord / game uses CABLE Output as microphone (not physical mic)
+          required: false
+        - label: I searched existing issues
+          required: true

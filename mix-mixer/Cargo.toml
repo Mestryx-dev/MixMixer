@@ -1,9 +1,15 @@
 [package]
 name = "mix-mixer"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Forward microphone post-E-APO to VB-Cable virtual mic (low latency)"
 rust-version = "1.75"
+license = "MIT"
+repository = "https://github.com/Mestryx-dev/MixMixer"
+homepage = "https://github.com/Mestryx-dev/MixMixer"
+readme = "../README.md"
+keywords = ["audio", "wasapi", "vb-cable", "microphone", "discord"]
+categories = ["multimedia::audio"]
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }

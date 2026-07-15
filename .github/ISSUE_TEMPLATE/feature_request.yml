@@ -1,0 +1,52 @@
+name: Feature request
+description: Suggest an improvement or new capability
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the problem and proposed solution. MixMixer focuses on low-latency mic → VB-Cable routing.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What limitation or pain point does this address?
+      placeholder: I'm always frustrated when...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      placeholder: Add a tray option to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      placeholder: I could use VoiceMeeter instead, but...
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Audio engine / latency
+        - Settings UI
+        - System tray
+        - Configuration
+        - Documentation / i18n
+        - Other
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and discussions
+          required: true

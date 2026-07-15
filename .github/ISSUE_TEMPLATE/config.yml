@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Tutorial
+    url: https://github.com/Mestryx-dev/MixMixer/blob/main/docs/TUTORIAL.md
+    about: Step-by-step setup guide
+  - name: Discussions
+    url: https://github.com/Mestryx-dev/MixMixer/discussions
+    about: Ask questions and share setups
