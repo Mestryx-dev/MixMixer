@@ -11,7 +11,7 @@ use crossbeam_channel::Receiver;
 use tracing::{info, warn};
 
 use crate::audio::metrics::AudioMetrics;
-use crate::audio::mixer::{apply_voice_gain, MixControls};
+use crate::audio::mixer::{apply_monitor_volume, copy_unity_voice, MixControls};
 use crate::audio::resampler::{from_stereo_interleaved, to_stereo_interleaved, StereoResampler};
 use crate::audio::ring_buffer::SpscRingBuffer;
 use crate::config::Config;
@@ -79,10 +79,7 @@ pub struct AudioEngine {
 
 impl AudioEngine {
     pub fn new(config: Config, metrics: Arc<AudioMetrics>) -> Result<Self> {
-        let controls = Arc::new(MixControls::from_gains(
-            &config.gains,
-            config.monitor.enabled,
-        ));
+        let controls = Arc::new(MixControls::from_monitor(&config.monitor));
         let voice_rb = Arc::new(SpscRingBuffer::new(RING_CAPACITY_SAMPLES));
         let monitor_rb = Arc::new(SpscRingBuffer::new(RING_CAPACITY_SAMPLES));
 
@@ -197,9 +194,7 @@ impl AudioEngine {
 
     fn apply_config(&mut self, config: Config, restart_streams: bool) {
         self.config = config;
-        self.controls.apply_gains(&self.config.gains);
-        self.controls
-            .set_monitor_enabled(self.config.monitor.enabled);
+        self.controls.apply_monitor(&self.config.monitor);
 
         if !self.config.enabled {
             self.release_streams();
@@ -234,9 +229,7 @@ impl AudioEngine {
         self.release_streams();
 
         self.config = config;
-        self.controls.apply_gains(&self.config.gains);
-        self.controls
-            .set_monitor_enabled(self.config.monitor.enabled);
+        self.controls.apply_monitor(&self.config.monitor);
         self.voice_rb.clear();
         self.monitor_rb.clear();
 
@@ -266,9 +259,7 @@ impl AudioEngine {
                     warn!(%err, "stream rebuild failed — restoring previous audio");
                     self.release_streams();
                     self.config = old_config.clone();
-                    self.controls.apply_gains(&self.config.gains);
-                    self.controls
-                        .set_monitor_enabled(self.config.monitor.enabled);
+                    self.controls.apply_monitor(&self.config.monitor);
                     self.voice_rb.clear();
                     self.monitor_rb.clear();
                     return self.restore_streams(&old_config);
@@ -291,9 +282,7 @@ impl AudioEngine {
 
     fn restore_streams(&mut self, config: &Config) -> Result<()> {
         self.config = config.clone();
-        self.controls.apply_gains(&self.config.gains);
-        self.controls
-            .set_monitor_enabled(self.config.monitor.enabled);
+        self.controls.apply_monitor(&self.config.monitor);
         if !self.config.enabled {
             info!("routing disabled — skip restore");
             return Ok(());
@@ -703,10 +692,12 @@ fn render_voice(
     let mut stereo_out = vec![0.0f32; stereo_len];
 
     voice_rb.pop_into(&mut voice);
-    apply_voice_gain(controls, &mut voice, &mut stereo_out);
+    // VB-Cable / Discord: unity gain (no UI slider).
+    copy_unity_voice(&voice, &mut stereo_out);
 
+    // Headphone monitor gets a dry copy; volume is applied on the monitor path.
     if controls.monitor_enabled() {
-        monitor_rb.push(&stereo_out);
+        monitor_rb.push(&voice);
     }
 
     if out_channels == 2 {
@@ -732,6 +723,7 @@ fn render_monitor(
     let stereo_len = frames * 2;
     let mut stereo_buf = vec![0.0f32; stereo_len];
     monitor_rb.pop_into(&mut stereo_buf);
+    apply_monitor_volume(controls, &mut stereo_buf);
 
     if out_channels == 2 {
         out.copy_from_slice(&stereo_buf);

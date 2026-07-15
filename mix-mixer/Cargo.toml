@@ -1,6 +1,6 @@
 [package]
 name = "mix-mixer"
-version = "0.1.3"
+version = "0.1.4-beta.1"
 edition = "2021"
 description = "Forward microphone post-E-APO to VB-Cable virtual mic (low latency)"
 rust-version = "1.75"

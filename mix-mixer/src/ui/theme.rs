@@ -58,7 +58,7 @@ impl Theme {
             + 2.0
             + Self::SECTION_NEXT_H
             + Self::ROW_H
-            + (Self::ROW_H + 1.0) * 3.0
+            + (Self::ROW_H + 1.0) * 2.0
             + Self::SECTION_FOOTER_H;
         Self::header_height() + central + Self::footer_height() + 12.0
     }

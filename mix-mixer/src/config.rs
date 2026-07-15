@@ -25,9 +25,6 @@ pub struct Config {
     pub devices: DeviceNames,
 
     #[serde(default)]
-    pub gains: Gains,
-
-    #[serde(default)]
     pub monitor: Monitor,
 
     #[serde(default = "default_enabled")]
@@ -42,17 +39,12 @@ pub struct DeviceNames {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct Gains {
-    #[serde(default = "default_one")]
-    pub voice: f32,
-    #[serde(default = "default_one")]
-    pub master: f32,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Monitor {
     #[serde(default)]
     pub enabled: bool,
+    /// Local headphone listen level only (does not affect CABLE / Discord).
+    #[serde(default = "default_monitor_volume")]
+    pub volume: f32,
 }
 
 impl Config {
@@ -98,7 +90,6 @@ impl Config {
                 virtual_mic_output,
                 monitor_output,
             },
-            gains: Gains::default(),
             monitor: Monitor::default(),
             enabled: default_enabled(),
         })
@@ -130,6 +121,9 @@ impl Config {
         if self.devices.virtual_mic_output.is_empty() {
             return Err(Error::config("devices.virtual_mic_output is required"));
         }
+        if !(0.0..=2.0).contains(&self.monitor.volume) {
+            return Err(Error::config("monitor.volume must be between 0.0 and 2.0"));
+        }
         Ok(())
     }
 
@@ -141,18 +135,12 @@ impl Config {
     }
 }
 
-impl Default for Gains {
-    fn default() -> Self {
-        Self {
-            voice: 1.0,
-            master: 1.0,
-        }
-    }
-}
-
 impl Default for Monitor {
     fn default() -> Self {
-        Self { enabled: false }
+        Self {
+            enabled: false,
+            volume: default_monitor_volume(),
+        }
     }
 }
 
@@ -164,7 +152,7 @@ fn default_buffer_frames() -> u32 {
     128
 }
 
-fn default_one() -> f32 {
+fn default_monitor_volume() -> f32 {
     1.0
 }
 

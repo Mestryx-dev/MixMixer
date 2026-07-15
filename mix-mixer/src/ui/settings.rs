@@ -123,6 +123,7 @@ struct SettingsApp {
     event_tx: Sender<AppEvent>,
     metrics: Arc<AudioMetrics>,
     window_height: f32,
+    last_pixels_per_point: f32,
     cmd_rx: Receiver<SettingsCommand>,
     ui_ctx: Arc<Mutex<Option<egui::Context>>>,
     tray: TrayHandle,
@@ -153,6 +154,7 @@ impl SettingsApp {
             event_tx,
             metrics,
             window_height: Theme::window_height(),
+            last_pixels_per_point: 0.0,
             cmd_rx,
             ui_ctx,
             tray,
@@ -193,14 +195,46 @@ impl SettingsApp {
         ctx.request_repaint();
     }
 
+    /// Keep a fixed logical size across monitors / DPI changes / accidental maximize.
     fn sync_window_size(&mut self, ctx: &egui::Context) {
-        let desired = Theme::window_height();
-        if (self.window_height - desired).abs() > 0.5 {
-            self.window_height = desired;
-            ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(
-                Theme::WINDOW_W,
-                desired,
-            )));
+        let desired = egui::vec2(Theme::WINDOW_W, Theme::window_height());
+        let (maximized, inner_size, ppp) = ctx.input(|i| {
+            let vp = i.viewport();
+            (
+                vp.maximized == Some(true),
+                vp.inner_rect.map(|r| r.size()),
+                i.pixels_per_point(),
+            )
+        });
+
+        let ppp_changed = self.last_pixels_per_point > 0.0
+            && (self.last_pixels_per_point - ppp).abs() > 0.01;
+        self.last_pixels_per_point = ppp;
+
+        let size_wrong = match inner_size {
+            Some(size) => {
+                (size.x - desired.x).abs() > 1.5 || (size.y - desired.y).abs() > 1.5
+            }
+            None => false,
+        };
+        let theme_changed = (self.window_height - desired.y).abs() > 0.5;
+
+        if maximized {
+            // Fixed dialog: never stay maximized (broken restore on mixed-DPI setups).
+            ctx.send_viewport_cmd(egui::ViewportCommand::Maximized(false));
+        }
+
+        if maximized || ppp_changed || size_wrong || theme_changed {
+            self.window_height = desired.y;
+            ctx.send_viewport_cmd(egui::ViewportCommand::Resizable(false));
+            ctx.send_viewport_cmd(egui::ViewportCommand::EnableButtons {
+                close: true,
+                minimized: true,
+                maximize: false,
+            });
+            ctx.send_viewport_cmd(egui::ViewportCommand::MinInnerSize(desired));
+            ctx.send_viewport_cmd(egui::ViewportCommand::MaxInnerSize(desired));
+            ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(desired));
         }
     }
 
@@ -453,16 +487,9 @@ impl eframe::App for SettingsApp {
                     );
                     theme::slider_block(
                         ui,
-                        texts.gain_voice,
+                        texts.monitor_volume,
                         false,
-                        &mut self.draft.gains.voice,
-                        0.0..=2.0,
-                    );
-                    theme::slider_block(
-                        ui,
-                        texts.gain_master,
-                        false,
-                        &mut self.draft.gains.master,
+                        &mut self.draft.monitor.volume,
                         0.0..=2.0,
                     );
                     theme::buffer_block(
@@ -513,7 +540,10 @@ fn run_settings_window(
             .with_min_inner_size([Theme::WINDOW_W, height])
             .with_max_inner_size([Theme::WINDOW_W, height])
             .with_resizable(false)
+            .with_maximize_button(false)
             .with_active(true),
+        // Don't restore a previous maximize / oversized rect across mixed-DPI monitors.
+        persist_window: false,
         event_loop_builder: Some(Box::new(|builder| {
             use winit::platform::windows::EventLoopBuilderExtWindows;
             builder.with_any_thread(true);

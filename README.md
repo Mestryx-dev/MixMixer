@@ -94,8 +94,8 @@ Optional override: `.\mix-mixer.exe --config D:\path\to\config.json`
 | `devices.voice_input` | Windows default mic | Capture device (post-E-APO mic) |
 | `devices.virtual_mic_output` | `CABLE Input` when found | VB-Cable input endpoint |
 | `devices.monitor_output` | default output | Headphone monitor output |
-| `gains.voice` / `gains.master` | `1.0` | Level multipliers |
 | `monitor.enabled` | `false` | Headphone monitor on/off |
+| `monitor.volume` | `1.0` | Local listen level only (does not change Discord / CABLE) |
 | `buffer_frames` | `128` | ~2.7 ms @ 48 kHz; increase if crackling |
 | `enabled` | `true` | Start with routing active |
 | `sample_rate` | `48000` | Sample rate (Hz) |
@@ -122,7 +122,8 @@ All UI strings live in [`mix-mixer/src/i18n/`](mix-mixer/src/i18n/).
 | Enable routing | Master on/off for mic → VB-Cable |
 | Device pickers | Microphone, virtual mic, monitor output |
 | Headphone monitor | Toggle local monitoring |
-| Sliders | Voice gain, master, buffer size |
+| Listen volume | Level in headphones only (CABLE stays unity) |
+| Buffer | Latency / stability trade-off |
 | **Apply** | Save and activate (toast; window stays open) |
 | **Cancel** | Revert to last applied values |
 | Close (×) / minimize | Hide window to tray (app keeps running) |

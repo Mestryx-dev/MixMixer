@@ -1,7 +1,7 @@
 # Documentation index — MixMixer / Audio
 
 > Entry point for agents: [`../agent.md`](../agent.md)  
-> **App version:** MixMixer **v0.1.3**  
+> **App version:** MixMixer **v0.1.4-beta.1**  
 > **Public repo:** [github.com/Mestryx-dev/MixMixer](https://github.com/Mestryx-dev/MixMixer)
 
 ---
@@ -21,7 +21,7 @@
 |----------|---------|
 | [../README.md](../README.md) | Product overview, config reference, screenshot |
 | [TUTORIAL.md](TUTORIAL.md) | Step-by-step Windows setup |
-| [RELEASE-v0.1.3.md](RELEASE-v0.1.3.md) | Current release notes / install |
+| [RELEASE-v0.1.4-beta.1.md](RELEASE-v0.1.4-beta.1.md) | Current (beta) release notes / install |
 | [../CHANGELOG.md](../CHANGELOG.md) | Version history |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | How to contribute |
 | [images/settings-window.png](images/settings-window.png) | Settings UI screenshot |
@@ -71,7 +71,7 @@ Audio/
 └── docs/
     ├── index.md              ← this file
     ├── TUTORIAL.md
-    ├── RELEASE-v0.1.3.md
+    ├── RELEASE-v0.1.4-beta.1.md
     ├── images/
     │   └── settings-window.png
     └── … internal notes …

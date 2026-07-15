@@ -7,12 +7,9 @@
     "virtual_mic_output": "CABLE Input",
     "monitor_output": "Speakers"
   },
-  "gains": {
-    "voice": 1.0,
-    "master": 1.0
-  },
   "monitor": {
-    "enabled": false
+    "enabled": false,
+    "volume": 1.0
   },
   "enabled": true
 }

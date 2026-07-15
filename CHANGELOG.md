@@ -5,6 +5,19 @@ All notable changes to MixMixer are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4-beta.1] - 2026-07-15
+
+### Changed
+
+- Removed Voice / Master gain sliders — VB-Cable path is always unity
+- Single **Listen volume** slider controls headphone monitor level only (`monitor.volume`)
+- Settings window no longer persists maximize / oversize across launches (`persist_window = false`)
+- Maximize button disabled; size is re-asserted after DPI / monitor changes
+
+### Fixed
+
+- Weird window size on mixed-resolution / mixed-DPI multi-monitor setups after maximize or moving between displays
+
 ## [0.1.3] - 2026-07-15
 
 ### Changed
@@ -72,6 +85,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Device substring matching and `--list-devices` CLI
 - Live latency and buffer metrics in settings UI
 
+[0.1.4-beta.1]: https://github.com/Mestryx-dev/MixMixer/releases/tag/v0.1.4-beta.1
 [0.1.3]: https://github.com/Mestryx-dev/MixMixer/releases/tag/v0.1.3
 [0.1.2]: https://github.com/Mestryx-dev/MixMixer/releases/tag/v0.1.2
 [0.1.1]: https://github.com/Mestryx-dev/MixMixer/releases/tag/v0.1.1
