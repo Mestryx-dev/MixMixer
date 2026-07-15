@@ -2,8 +2,13 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-lightgrey)](https://github.com/Mestryx-dev/MixMixer)
+[![Release](https://img.shields.io/github/v/release/Mestryx-dev/MixMixer)](https://github.com/Mestryx-dev/MixMixer/releases)
 
 **MixMixer** is a lightweight Windows system-tray application that routes your **post–Equalizer APO microphone** to **VB-Audio Virtual Cable** with minimal latency. Discord, games, and OBS use **CABLE Output** as the microphone input while your physical mic stays on the E-APO chain.
+
+## Screenshot
+
+![MixMixer settings window — routing, devices, and live latency metrics](docs/images/settings-window.png)
 
 ## Signal flow
 
@@ -23,10 +28,12 @@ External soundboard / browser ──► CABLE Input (separate app; Windows mixes
 
 - Low-latency WASAPI capture and playback (Rust + cpal)
 - iOS-style settings window (egui) with live latency metrics
-- System tray controls: settings, monitor toggle, reload config, quit
+- System tray: **double-click** opens settings; **right-click** → About / Quit
+- Hide to tray on close or minimize (does not quit)
+- Toast feedback on Apply; GitHub link in the footer
+- EN / FR language chips in the header (`locale` in config or `MIXMIXER_LANG`)
 - Auto-reconnect when Windows audio devices change (e.g. Discord switching devices)
 - Optional headphone monitor bus
-- English and French UI (`locale` in config or `MIXMIXER_LANG`)
 
 ## Requirements
 
@@ -39,7 +46,13 @@ External soundboard / browser ──► CABLE Input (separate app; Windows mixes
 
 ## Quick start
 
-### 1. Build
+### Download (recommended)
+
+Download the latest **Windows x64** build from [Releases](https://github.com/Mestryx-dev/MixMixer/releases).
+
+Extract the zip, copy `config.example.json` → `config.json`, then continue from **Configure** below.
+
+### 1. Build from source
 
 ```powershell
 cd mix-mixer
@@ -65,7 +78,7 @@ Edit `config.json` — device names use **case-insensitive substring** matching.
 
 ### 4. Run
 
-Place `mix-mixer.exe` next to `config.json` and launch. The settings window opens on startup; double-click the tray icon to reopen it.
+Place `mix-mixer.exe` next to `config.json` and launch. The settings window opens on startup; double-click the tray icon to reopen it. Closing the window hides it to the tray.
 
 Full walkthrough: [docs/TUTORIAL.md](docs/TUTORIAL.md)
 
@@ -87,7 +100,7 @@ See [`mix-mixer/config.example.json`](mix-mixer/config.example.json).
 
 ### Language
 
-Set in `config.json`:
+Use the **FR** / **EN** chips in the settings header, or set in `config.json`:
 
 ```json
 "locale": "fr"
@@ -106,14 +119,24 @@ All UI strings live in [`mix-mixer/src/i18n/`](mix-mixer/src/i18n/) — add a ne
 
 | Control | Action |
 |---------|--------|
+| Header metrics | Routing state, estimated latency, buffer fill |
+| FR / EN chips | Switch UI language (saved to config) |
+| Enable routing | Master on/off for mic → VB-Cable |
 | Device pickers | Microphone, virtual mic, monitor output |
 | Headphone monitor | Toggle local monitoring |
 | Sliders | Voice gain, master, buffer size |
-| **Apply** | Save and activate (window stays open) |
+| **Apply** | Save and activate (toast; window stays open) |
 | **Cancel** | Revert to last applied values |
-| **Quit** | Exit MixMixer |
+| Close (×) / minimize | Hide window to tray (app keeps running) |
+| Footer version | Opens the [GitHub repository](https://github.com/Mestryx-dev/MixMixer) |
 
-Live metrics in the header: routing state, estimated latency, buffer fill.
+## System tray
+
+| Action | Effect |
+|--------|--------|
+| Double-click icon | Open settings |
+| Right-click → About | Show about dialog |
+| Right-click → Quit | Exit MixMixer |
 
 ## Troubleshooting
 
@@ -133,7 +156,7 @@ cargo build
 cargo run -- --list-devices
 ```
 
-Internal docs (French): [`docs/dev-mix-mixer.md`](docs/dev-mix-mixer.md)
+Internal notes (French): [`docs/dev-mix-mixer.md`](docs/dev-mix-mixer.md)
 
 ## Contributing
 

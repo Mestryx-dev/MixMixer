@@ -1,6 +1,6 @@
 [package]
 name = "mix-mixer"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = "Forward microphone post-E-APO to VB-Cable virtual mic (low latency)"
 rust-version = "1.75"
@@ -22,6 +22,7 @@ thiserror = "2"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tray-icon = { version = "0.19", features = ["serde"] }
+windows-sys = { version = "0.52", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
 eframe = { version = "0.29", default-features = false, features = ["default_fonts", "glow"] }
 egui = "0.29"
 winit = { version = "0.30", features = ["rwh_06"] }

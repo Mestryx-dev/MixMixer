@@ -1,10 +1,10 @@
 use eframe::egui::{
-    self, pos2, vec2, Color32, Context, FontId, Frame, Id, Layout, Margin, Rounding, Sense, Stroke,
-    Ui,
+    self, pos2, vec2, Align2, Color32, Context, FontId, Frame, Id, Layout, Margin, Order, Rounding,
+    Sense, Stroke, Ui,
 };
 
 use crate::audio::metrics::MetricsSnapshot;
-use crate::i18n::UiText;
+use crate::i18n::{Locale, UiText};
 
 pub struct Theme;
 
@@ -22,19 +22,24 @@ impl Theme {
     pub const ERROR: Color32 = Color32::from_rgb(255, 69, 58);
     pub const CHEVRON: Color32 = Color32::from_rgb(142, 142, 147);
     pub const BTN_SECONDARY: Color32 = Color32::from_rgb(58, 58, 60);
-    pub const ROW_HOVER: Color32 = Color32::from_rgba_premultiplied(255, 255, 255, 14);
+    /// Subtle row hover (~4% white on dark). Visible but non-distracting (WCAG UI component guidance).
+    pub const ROW_HOVER: Color32 = Color32::from_rgba_premultiplied(10, 10, 10, 10);
+    pub const ROW_HOVER_RADIUS: f32 = 10.0;
+    pub const ROW_HOVER_INSET_V: f32 = 3.0;
 
     pub const WINDOW_W: f32 = 480.0;
 
-    pub const HEADER_BODY_H: f32 = 38.0;
+    pub const HEADER_BODY_H: f32 = 52.0;
     pub const HEADER_FRAME_V: f32 = 20.0;
     pub const FOOTER_BODY_H: f32 = 36.0;
-    pub const FOOTER_FRAME_V: f32 = 24.0;
+    pub const FOOTER_FRAME_V: f32 = 28.0;
 
     pub const SECTION_FIRST_H: f32 = 33.0;
     pub const SECTION_NEXT_H: f32 = 41.0;
-    pub const SECTION_FOOTER_H: f32 = 21.0;
-    pub const STATUS_BANNER_H: f32 = 52.0;
+    pub const SECTION_FOOTER_H: f32 = 28.0;
+
+    pub const TOAST_DURATION_SECS: f32 = 2.5;
+    pub const TOAST_FADE_SECS: f32 = 0.3;
 
     pub fn header_height() -> f32 {
         Self::HEADER_BODY_H + Self::HEADER_FRAME_V
@@ -45,12 +50,17 @@ impl Theme {
     }
 
     /// Client height sized to fit all rows without scrolling.
-    pub fn window_height(show_status: bool) -> f32 {
-        let central = Self::SECTION_FIRST_H + Self::ROW_H
-            + Self::SECTION_NEXT_H + Self::ROW_H * 3.0 + 2.0
-            + Self::SECTION_NEXT_H + Self::ROW_H + (Self::ROW_H + 1.0) * 3.0 + Self::SECTION_FOOTER_H;
-        let status = if show_status { Self::STATUS_BANNER_H } else { 0.0 };
-        Self::header_height() + central + status + Self::footer_height()
+    pub fn window_height() -> f32 {
+        let central = Self::SECTION_FIRST_H
+            + Self::ROW_H
+            + Self::SECTION_NEXT_H
+            + Self::ROW_H * 3.0
+            + 2.0
+            + Self::SECTION_NEXT_H
+            + Self::ROW_H
+            + (Self::ROW_H + 1.0) * 3.0
+            + Self::SECTION_FOOTER_H;
+        Self::header_height() + central + Self::footer_height() + 12.0
     }
 
     pub const INSET: f32 = 16.0;
@@ -74,6 +84,7 @@ impl Theme {
         style.spacing.slider_width = 320.0;
         style.spacing.slider_rail_height = 4.0;
         style.spacing.interact_size = vec2(32.0, 32.0);
+        style.interaction.selectable_labels = false;
 
         let v = &mut style.visuals;
         v.dark_mode = true;
@@ -114,43 +125,155 @@ fn body_text(text: &str) -> egui::RichText {
 }
 
 fn caption_text(text: &str) -> egui::RichText {
-    egui::RichText::new(text).size(13.0).color(Theme::TEXT_TERTIARY)
+    egui::RichText::new(text)
+        .size(13.0)
+        .color(Theme::TEXT_TERTIARY)
 }
 
 fn value_text(text: &str) -> egui::RichText {
-    egui::RichText::new(text).size(15.0).color(Theme::TEXT_SECONDARY)
+    egui::RichText::new(text)
+        .size(15.0)
+        .color(Theme::TEXT_SECONDARY)
 }
 
-fn chevron() -> egui::RichText {
-    egui::RichText::new("›").size(22.0).color(Theme::CHEVRON)
+/// Inset, rounded hover fill aligned with grouped list rows (iOS-style).
+fn paint_row_hover(ui: &Ui, rect: egui::Rect) {
+    let hover_rect = egui::Rect::from_min_max(
+        pos2(rect.left(), rect.top() + Theme::ROW_HOVER_INSET_V),
+        pos2(rect.right(), rect.bottom() - Theme::ROW_HOVER_INSET_V),
+    );
+    ui.painter().rect_filled(
+        hover_rect,
+        Rounding::same(Theme::ROW_HOVER_RADIUS),
+        Theme::ROW_HOVER,
+    );
 }
 
-pub fn header(ui: &mut Ui, snap: &MetricsSnapshot, texts: &UiText) {
-    ui.set_min_height(Theme::HEADER_BODY_H);
-    ui.vertical(|ui| {
-        ui.horizontal(|ui| {
-            ui.label(body_text("MixMixer").strong().size(17.0));
-            ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
-                let (label, color) = if snap.routing_live {
-                    (texts.status_active, Theme::GREEN)
-                } else if snap.reconnect_pending {
-                    (texts.status_reconnecting, Theme::WARNING)
-                } else {
-                    (texts.status_inactive, Theme::TEXT_SECONDARY)
-                };
-                ui.label(
-                    egui::RichText::new(format!(
-                        "{label} · {:.1} ms · {:.0} %",
-                        snap.estimated_latency_ms, snap.voice_buffer_pct
-                    ))
-                    .size(13.0)
-                    .color(color),
-                );
-            });
-        });
-        ui.add_space(4.0);
-        ui.label(caption_text(texts.header_subtitle));
+/// One-line picker row: label left, value right; entire row opens the menu (no text selection).
+fn dropdown_row(
+    ui: &mut Ui,
+    id: &str,
+    label: &str,
+    value: &str,
+    first: bool,
+) -> (egui::Response, Id) {
+    if !first {
+        inset_separator(ui);
+    }
+
+    let popup_id = Id::new(id);
+    let display = truncate_end(value, 40);
+    let width = ui.available_width();
+    let (rect, response) = ui.allocate_exact_size(vec2(width, Theme::ROW_H), Sense::click());
+
+    if response.hovered() {
+        paint_row_hover(ui, rect);
+    }
+
+    let painter = ui.painter();
+    painter.text(
+        pos2(rect.left() + Theme::INSET, rect.center().y),
+        Align2::LEFT_CENTER,
+        label,
+        FontId::proportional(15.0),
+        Theme::TEXT,
+    );
+    painter.text(
+        pos2(rect.right() - Theme::INSET, rect.center().y),
+        Align2::RIGHT_CENTER,
+        display,
+        FontId::proportional(15.0),
+        Theme::TEXT_SECONDARY,
+    );
+
+    (response, popup_id)
+}
+
+/// Compact EN / FR chip for the header. Returns true if locale changed.
+fn header_locale_chip(ui: &mut Ui, current: &mut Locale, target: Locale) -> bool {
+    let active = *current == target;
+    let code = target.short_code();
+    let (rect, response) = ui.allocate_exact_size(vec2(26.0, 18.0), Sense::click());
+
+    let color = if active {
+        Theme::TEXT
+    } else {
+        Theme::TEXT_TERTIARY
+    };
+
+    ui.painter().text(
+        rect.center(),
+        Align2::CENTER_CENTER,
+        code,
+        FontId::proportional(12.0),
+        color,
+    );
+
+    if response.hovered() && !active {
+        ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+    }
+
+    if response.clicked() && !active {
+        *current = target;
+        return true;
+    }
+    false
+}
+
+fn header_locale_chips(ui: &mut Ui, locale: &mut Locale) -> bool {
+    let mut changed = false;
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 8.0;
+        if header_locale_chip(ui, locale, Locale::Fr) {
+            changed = true;
+        }
+        if header_locale_chip(ui, locale, Locale::En) {
+            changed = true;
+        }
     });
+    changed
+}
+
+/// Routing toggle only (locale lives in the header).
+pub fn routing_row(ui: &mut Ui, texts: &UiText, routing: &mut bool) {
+    toggle_row(ui, texts.routing_enable, true, routing);
+}
+
+pub fn header(ui: &mut Ui, snap: &MetricsSnapshot, texts: &UiText, locale: &mut Locale) -> bool {
+    let mut locale_changed = false;
+    ui.set_min_height(Theme::HEADER_BODY_H);
+
+    ui.horizontal(|ui| {
+        ui.vertical(|ui| {
+            ui.label(body_text("MixMixer").strong().size(17.0));
+            ui.add_space(4.0);
+            ui.label(caption_text(texts.header_subtitle));
+        });
+
+        ui.with_layout(Layout::top_down(egui::Align::RIGHT), |ui| {
+            let (label, color) = if snap.routing_live {
+                (texts.status_active, Theme::GREEN)
+            } else if snap.reconnect_pending {
+                (texts.status_reconnecting, Theme::WARNING)
+            } else {
+                (texts.status_inactive, Theme::TEXT_SECONDARY)
+            };
+            ui.label(
+                egui::RichText::new(format!(
+                    "{label} · {:.1} ms · {:.0} %",
+                    snap.estimated_latency_ms, snap.voice_buffer_pct
+                ))
+                .size(13.0)
+                .color(color),
+            );
+            ui.add_space(2.0);
+            if header_locale_chips(ui, locale) {
+                locale_changed = true;
+            }
+        });
+    });
+
+    locale_changed
 }
 
 pub fn section_header(ui: &mut Ui, title: &str, first: bool) {
@@ -202,11 +325,7 @@ fn ios_switch(ui: &mut Ui, on: &mut bool) -> egui::Response {
 
     let t = ui.ctx().animate_bool(response.id, *on);
     let painter = ui.painter();
-    let track = Color32::from_rgb(
-        lerp_u8(57, 48, t),
-        lerp_u8(57, 209, t),
-        lerp_u8(61, 88, t),
-    );
+    let track = Color32::from_rgb(lerp_u8(57, 48, t), lerp_u8(57, 209, t), lerp_u8(61, 88, t));
     painter.rect_filled(rect, Rounding::same(Theme::SWITCH_H / 2.0), track);
 
     let thumb_r = 13.5;
@@ -229,7 +348,11 @@ fn lerp_u8(a: u8, b: u8, t: f32) -> u8 {
     (a as f32 + (b as f32 - a as f32) * t).round() as u8
 }
 
-fn list_row<R>(ui: &mut Ui, height: f32, add_contents: impl FnOnce(&mut Ui) -> R) -> egui::InnerResponse<R> {
+fn list_row<R>(
+    ui: &mut Ui,
+    height: f32,
+    add_contents: impl FnOnce(&mut Ui) -> R,
+) -> egui::InnerResponse<R> {
     ui.allocate_ui_with_layout(
         vec2(ui.available_width(), height),
         Layout::left_to_right(egui::Align::Center),
@@ -312,17 +435,7 @@ pub fn picker_row(
             .unwrap_or_else(|| selected.clone())
     };
 
-    let popup_id = Id::new(id);
-    let row = list_row(ui, Theme::ROW_H, |ui| {
-        row_label_cell(ui, label);
-        row_trailing_flex(ui, |ui| {
-            ui.label(chevron());
-            ui.add_space(4.0);
-            ui.label(value_text(&truncate_end(&display, 28)));
-        });
-    });
-
-    let response = row.response.interact(Sense::click());
+    let (response, popup_id) = dropdown_row(ui, id, label, &truncate_end(&display, 28), true);
 
     if response.clicked() {
         ui.memory_mut(|mem| mem.toggle_popup(popup_id));
@@ -337,7 +450,7 @@ pub fn picker_row(
             ui.set_min_width(ui.available_width().max(320.0));
             Frame::popup(ui.style())
                 .fill(Theme::GROUP)
-                .stroke(Stroke::new(1.0, Theme::SEPARATOR))
+                .stroke(Stroke::new(1.0_f32, Theme::SEPARATOR))
                 .rounding(Rounding::same(10.0))
                 .show(ui, |ui| {
                     for name in names {
@@ -487,16 +600,124 @@ fn paint_ios_slider(ui: &Ui, rect: egui::Rect, t: f32) {
     );
 }
 
-pub fn status_banner(ui: &mut Ui, message: &str, ok: bool) {
-    let color = if ok { Theme::GREEN } else { Theme::ERROR };
-    ui.add_space(16.0);
-    Frame::none()
-        .fill(color.gamma_multiply(0.12))
-        .inner_margin(Margin::symmetric(16.0, 12.0))
-        .rounding(Rounding::same(Theme::GROUP_RADIUS))
-        .show(ui, |ui| {
-            ui.label(egui::RichText::new(message).size(13.0).color(color));
+/// Floating toast overlay (does not affect window layout).
+pub fn toast(ctx: &Context, message: &str, ok: bool, age_secs: f32) {
+    let total = Theme::TOAST_DURATION_SECS + Theme::TOAST_FADE_SECS;
+    if age_secs >= total {
+        return;
+    }
+
+    let fade = Theme::TOAST_FADE_SECS;
+    let alpha = if age_secs < fade {
+        age_secs / fade
+    } else if age_secs > Theme::TOAST_DURATION_SECS {
+        1.0 - (age_secs - Theme::TOAST_DURATION_SECS) / fade
+    } else {
+        1.0
+    }
+    .clamp(0.0, 1.0);
+
+    let accent = if ok { Theme::GREEN } else { Theme::ERROR };
+    let bg_alpha = (230.0 * alpha) as u8;
+    let offset_y = -(Theme::footer_height() + 20.0);
+
+    egui::Area::new(Id::new("mixmixer_toast"))
+        .anchor(Align2::CENTER_BOTTOM, vec2(0.0, offset_y))
+        .order(Order::Foreground)
+        .interactable(false)
+        .show(ctx, |ui| {
+            Frame::none()
+                .fill(Color32::from_rgba_premultiplied(44, 44, 46, bg_alpha))
+                .stroke(Stroke::new(1.0_f32, accent.gamma_multiply(0.35 * alpha)))
+                .inner_margin(Margin::symmetric(18.0, 11.0))
+                .rounding(Rounding::same(14.0))
+                .show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(
+                            egui::RichText::new(if ok { "✓" } else { "!" })
+                                .size(14.0)
+                                .color(accent.gamma_multiply(alpha)),
+                        );
+                        ui.add_space(8.0);
+                        ui.label(
+                            egui::RichText::new(message)
+                                .size(14.0)
+                                .color(Theme::TEXT.gamma_multiply(alpha)),
+                        );
+                    });
+                });
         });
+}
+
+pub struct FooterActions {
+    pub apply: bool,
+    pub cancel: bool,
+}
+
+/// Settings footer: version (left), Cancel + Apply (right, Windows property-sheet order).
+pub fn settings_footer(
+    ui: &mut Ui,
+    texts: &UiText,
+    version: &str,
+    has_unsaved: bool,
+) -> FooterActions {
+    let mut actions = FooterActions {
+        apply: false,
+        cancel: false,
+    };
+
+    ui.set_min_height(Theme::FOOTER_BODY_H);
+
+    ui.horizontal(|ui| {
+        ui.hyperlink_to(
+            egui::RichText::new(format!("MixMixer v{version}"))
+                .size(12.0)
+                .color(Theme::ACCENT),
+            env!("CARGO_PKG_REPOSITORY"),
+        );
+        if has_unsaved {
+            ui.add_space(8.0);
+            ui.label(
+                egui::RichText::new(texts.footer_unsaved)
+                    .size(12.0)
+                    .color(Theme::WARNING),
+            );
+        }
+
+        ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
+            ui.spacing_mut().item_spacing.x = 10.0;
+            ui.set_width(ui.available_width());
+
+            let apply_clicked = ui
+                .add_enabled(has_unsaved, |ui: &mut Ui| {
+                    ui.add(
+                        egui::Button::new(
+                            egui::RichText::new(texts.btn_apply)
+                                .size(15.0)
+                                .color(Color32::WHITE),
+                        )
+                        .fill(if has_unsaved {
+                            Theme::ACCENT
+                        } else {
+                            Theme::BTN_SECONDARY
+                        })
+                        .stroke(Stroke::NONE)
+                        .rounding(Rounding::same(8.0))
+                        .min_size(vec2(96.0, 36.0)),
+                    )
+                })
+                .clicked();
+            if apply_clicked {
+                actions.apply = true;
+            }
+
+            if btn_secondary(ui, texts.btn_cancel) {
+                actions.cancel = true;
+            }
+        });
+    });
+
+    actions
 }
 
 pub fn btn_primary(ui: &mut Ui, label: &str) -> bool {

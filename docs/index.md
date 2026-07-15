@@ -1,59 +1,78 @@
-# Documentation canonique — Audio
+# Documentation index — MixMixer / Audio
 
-> Index des documents de référence du projet.  
-> **Point d'entrée agent :** [`../agent.md`](../agent.md)  
-> **Version app :** MixMixer v0.1 baseline (`8c50c7d`)
-
----
-
-## Convention
-
-| Règle | Description |
-|-------|-------------|
-| **Source de vérité matérielle** | `devices.md` — GUIDs, noms Windows, état connecté/déconnecté |
-| **Source de vérité E-APO** | `equalizer-apo.md` — chaînes VST, chemins config, backups |
-| **Source de vérité MixMixer** | `dev-mix-mixer.md` + `mix-mixer/README.md` |
-| **Audits datés** | `audit/YYYY-MM-DD.md` — snapshot read-only, jamais écrasé |
-| **Décisions** | `decisions.md` — choix d'architecture (format ADR léger) |
-| **Git local** | Dépôt `d:\Audio\` — pas de remote configuré |
-
-Les audits sont **immutables** après rédaction. L'état vivant est dans `agent.md` et les docs de référence.
+> Entry point for agents: [`../agent.md`](../agent.md)  
+> **App version:** MixMixer **v0.1.2**  
+> **Public repo:** [github.com/Mestryx-dev/MixMixer](https://github.com/Mestryx-dev/MixMixer)
 
 ---
 
-## Documents
+## Public vs internal
 
-| Document | Contenu |
+| Kind | Language | Audience |
+|------|----------|----------|
+| **Public** | English | GitHub users, releases, setup |
+| **Internal** | French (mostly) | Local machine notes, ADRs, hardware inventory |
+
+---
+
+## Public documents (English)
+
+| Document | Content |
 |----------|---------|
-| [audit/2026-07-14.md](audit/2026-07-14.md) | Premier audit local (read-only) |
-| [devices.md](devices.md) | Inventaire périphériques + GUIDs |
-| [equalizer-apo.md](equalizer-apo.md) | Config Equalizer APO + inventaire VST |
-| [architecture.md](architecture.md) | Schémas, options historiques, MixMixer v0.1 |
-| [dev-mix-mixer.md](dev-mix-mixer.md) | Spec technique MixMixer v0.1 |
-| [validate-mix-mixer.md](validate-mix-mixer.md) | Checklist validation manuelle |
-| [decisions.md](decisions.md) | Journal des décisions (DEC-001 … DEC-006) |
-| [../mix-mixer/README.md](../mix-mixer/README.md) | Guide install / usage Windows |
+| [../README.md](../README.md) | Product overview, config reference, screenshot |
+| [TUTORIAL.md](TUTORIAL.md) | Step-by-step Windows setup |
+| [RELEASE-v0.1.2.md](RELEASE-v0.1.2.md) | Current release notes / install |
+| [../CHANGELOG.md](../CHANGELOG.md) | Version history |
+| [../CONTRIBUTING.md](../CONTRIBUTING.md) | How to contribute |
+| [images/settings-window.png](images/settings-window.png) | Settings UI screenshot |
 
 ---
 
-## Arborescence
+## Internal documents
+
+| Document | Content |
+|----------|---------|
+| [dev-mix-mixer.md](dev-mix-mixer.md) | Technical spec (MixMixer) |
+| [validate-mix-mixer.md](validate-mix-mixer.md) | Manual validation checklist |
+| [architecture.md](architecture.md) | Historical options + MixMixer flow |
+| [decisions.md](decisions.md) | ADR journal (DEC-001 …) |
+| [devices.md](devices.md) | Local device inventory + GUIDs |
+| [equalizer-apo.md](equalizer-apo.md) | Local E-APO / VST chain notes |
+| [audit/2026-07-14.md](audit/2026-07-14.md) | Dated read-only audit snapshot |
+
+Audits are **immutable** after writing. Living status stays in `agent.md`.
+
+---
+
+## Conventions
+
+| Rule | Description |
+|------|-------------|
+| Hardware source of truth | `devices.md` |
+| E-APO source of truth | `equalizer-apo.md` |
+| MixMixer product docs | Root `README.md` + `TUTORIAL.md` |
+| Screenshots | `docs/images/` |
+| User config | Never commit `mix-mixer/config.json` |
+
+---
+
+## Tree (high level)
 
 ```
-d:\Audio\
-├── .git/                    ← dépôt local (baseline 8c50c7d)
-├── agent.md                 ← hub agent (statut courant)
-├── mix-mixer/               ← app MixMixer (Rust)
-│   ├── src/
-│   ├── config.json
-│   └── target/              ← ignoré par git
+Audio/
+├── README.md                 ← public product page
+├── CHANGELOG.md
+├── LICENSE
+├── CONTRIBUTING.md
+├── agent.md                  ← agent hub (internal)
+├── mix-mixer/                ← Rust app
+│   ├── config.example.json
+│   └── src/
 └── docs/
-    ├── index.md             ← ce fichier
-    ├── dev-mix-mixer.md
-    ├── validate-mix-mixer.md
-    ├── architecture.md
-    ├── decisions.md
-    ├── devices.md
-    ├── equalizer-apo.md
-    └── audit/
-        └── 2026-07-14.md
+    ├── index.md              ← this file
+    ├── TUTORIAL.md
+    ├── RELEASE-v0.1.2.md
+    ├── images/
+    │   └── settings-window.png
+    └── … internal notes …
 ```

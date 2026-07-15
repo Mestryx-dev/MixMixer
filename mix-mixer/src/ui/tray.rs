@@ -1,4 +1,8 @@
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
+
 use crossbeam_channel::Sender;
+use egui::Context;
 use tray_icon::menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem};
 use tray_icon::{MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent};
 
@@ -9,32 +13,29 @@ use crate::AppEvent;
 #[derive(Debug, Clone, Copy)]
 pub enum TrayAction {
     OpenSettings,
+    About,
     Quit,
-    ToggleMonitor,
-    ReloadConfig,
 }
 
-pub struct TrayManager {
+/// Tray icon owned by the egui/winit thread (required on Windows).
+pub struct TrayHandle {
     _tray: TrayIcon,
-    event_tx: Sender<AppEvent>,
+    about_id: tray_icon::menu::MenuId,
+    quit_id: tray_icon::menu::MenuId,
 }
 
-impl TrayManager {
-    pub fn new(event_tx: Sender<AppEvent>, locale: Locale) -> Result<Self> {
+impl TrayHandle {
+    pub fn new(
+        locale: Locale,
+        ui_ctx: Arc<Mutex<Option<Context>>>,
+        hidden_to_tray: Arc<AtomicBool>,
+    ) -> Result<Self> {
         let texts = locale.texts();
         let menu = Menu::new();
-        let settings_item = MenuItem::new(texts.tray_settings, true, None);
-        let monitor_item = MenuItem::new(texts.tray_toggle_monitor, true, None);
-        let reload_item = MenuItem::new(texts.tray_reload, true, None);
+        let about_item = MenuItem::new(texts.tray_about, true, None);
         let quit_item = MenuItem::new(texts.tray_quit, true, None);
 
-        menu.append(&settings_item)
-            .map_err(|e| Error::Tray(format!("menu append: {e}")))?;
-        menu.append(&PredefinedMenuItem::separator())
-            .map_err(|e| Error::Tray(format!("menu append: {e}")))?;
-        menu.append(&monitor_item)
-            .map_err(|e| Error::Tray(format!("menu append: {e}")))?;
-        menu.append(&reload_item)
+        menu.append(&about_item)
             .map_err(|e| Error::Tray(format!("menu append: {e}")))?;
         menu.append(&PredefinedMenuItem::separator())
             .map_err(|e| Error::Tray(format!("menu append: {e}")))?;
@@ -46,73 +47,62 @@ impl TrayManager {
 
         let tray = TrayIconBuilder::new()
             .with_menu(Box::new(menu))
+            .with_menu_on_left_click(false)
             .with_tooltip(texts.tray_tooltip)
             .with_icon(icon)
             .build()
             .map_err(|e| Error::Tray(format!("tray build: {e}")))?;
 
-        let tray_id = tray.id().clone();
+        let tray_id_for_handler = tray.id().clone();
+        let ui_ctx_for_handler = Arc::clone(&ui_ctx);
+        let hidden_for_handler = Arc::clone(&hidden_to_tray);
 
-        let event_tx_clone = event_tx.clone();
-        let settings_id = settings_item.id().clone();
-        let monitor_id = monitor_item.id().clone();
-        let reload_id = reload_item.id().clone();
-        let quit_id = quit_item.id().clone();
-
-        std::thread::spawn(move || {
-            let menu_channel = MenuEvent::receiver();
-            let tray_channel = TrayIconEvent::receiver();
-            loop {
-                if let Ok(event) = tray_channel.try_recv() {
-                    match event {
-                        TrayIconEvent::DoubleClick { id, button, .. }
-                            if id == tray_id && button == MouseButton::Left =>
-                        {
-                            let _ =
-                                event_tx_clone.send(AppEvent::Tray(TrayAction::OpenSettings));
-                        }
-                        TrayIconEvent::Click {
-                            id,
-                            button,
-                            button_state,
-                            ..
-                        } if id == tray_id
-                            && button == MouseButton::Left
-                            && button_state == MouseButtonState::Up =>
-                        {
-                            let _ =
-                                event_tx_clone.send(AppEvent::Tray(TrayAction::OpenSettings));
-                        }
-                        _ => {}
+        TrayIconEvent::set_event_handler(Some(move |event| {
+            let opens = match &event {
+                TrayIconEvent::DoubleClick {
+                    id,
+                    button: MouseButton::Left,
+                    ..
+                } => id == &tray_id_for_handler,
+                TrayIconEvent::Click {
+                    id,
+                    button: MouseButton::Left,
+                    button_state: MouseButtonState::Up,
+                    ..
+                } => id == &tray_id_for_handler,
+                _ => false,
+            };
+            if opens {
+                hidden_for_handler.store(false, Ordering::Release);
+                if let Ok(guard) = ui_ctx_for_handler.lock() {
+                    if let Some(ctx) = guard.as_ref() {
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(false));
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
+                        ctx.send_viewport_cmd(egui::ViewportCommand::RequestUserAttention(
+                            egui::UserAttentionType::Informational,
+                        ));
+                        ctx.request_repaint();
                     }
                 }
-
-                if let Ok(event) = menu_channel.try_recv() {
-                    if event.id == settings_id {
-                        let _ = event_tx_clone.send(AppEvent::Tray(TrayAction::OpenSettings));
-                    } else if event.id == monitor_id {
-                        let _ = event_tx_clone.send(AppEvent::Tray(TrayAction::ToggleMonitor));
-                    } else if event.id == reload_id {
-                        let _ = event_tx_clone.send(AppEvent::Tray(TrayAction::ReloadConfig));
-                    } else if event.id == quit_id {
-                        let _ = event_tx_clone.send(AppEvent::Tray(TrayAction::Quit));
-                        break;
-                    }
-                }
-
-                std::thread::sleep(std::time::Duration::from_millis(50));
             }
-        });
+        }));
 
         Ok(Self {
+            about_id: about_item.id().clone(),
+            quit_id: quit_item.id().clone(),
             _tray: tray,
-            event_tx,
         })
     }
 
-    pub fn poll(&mut self) -> Result<()> {
-        let _ = &self.event_tx;
-        Ok(())
+    pub fn poll(&self, event_tx: &Sender<AppEvent>) {
+        while let Ok(event) = MenuEvent::receiver().try_recv() {
+            if event.id == self.about_id {
+                let _ = event_tx.send(AppEvent::Tray(TrayAction::About));
+            } else if event.id == self.quit_id {
+                let _ = event_tx.send(AppEvent::Tray(TrayAction::Quit));
+            }
+        }
     }
 }
 

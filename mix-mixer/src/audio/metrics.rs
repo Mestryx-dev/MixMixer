@@ -24,8 +24,7 @@ impl AudioMetrics {
     }
 
     pub fn set_voice_buffer(&self, samples: usize, capacity: usize) {
-        self.voice_buffer_samples
-            .store(samples, Ordering::Relaxed);
+        self.voice_buffer_samples.store(samples, Ordering::Relaxed);
         self.voice_buffer_capacity
             .store(capacity.max(1), Ordering::Relaxed);
     }
@@ -35,8 +34,10 @@ impl AudioMetrics {
     }
 
     pub fn set_config(&self, sample_rate: u32, buffer_frames: u32) {
-        self.sample_rate.store(sample_rate.max(1), Ordering::Relaxed);
-        self.buffer_frames.store(buffer_frames.max(1), Ordering::Relaxed);
+        self.sample_rate
+            .store(sample_rate.max(1), Ordering::Relaxed);
+        self.buffer_frames
+            .store(buffer_frames.max(1), Ordering::Relaxed);
     }
 
     pub fn set_routing_live(&self, live: bool) {

@@ -3,7 +3,10 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use cpal::traits::{DeviceTrait, StreamTrait};
-use cpal::{BufferSize, Sample, SampleFormat, SampleRate, Stream, StreamConfig, SupportedBufferSize, StreamError};
+use cpal::{
+    BufferSize, Sample, SampleFormat, SampleRate, Stream, StreamConfig, StreamError,
+    SupportedBufferSize,
+};
 use crossbeam_channel::Receiver;
 use tracing::{info, warn};
 
@@ -182,27 +185,21 @@ impl AudioEngine {
     }
 
     fn sync_metrics(&self) {
-        self.metrics.set_voice_buffer(
-            self.voice_rb.available(),
-            RING_CAPACITY_SAMPLES,
-        );
         self.metrics
-            .set_streams(self._streams.len());
-        self.metrics.set_config(
-            self.config.sample_rate,
-            self.config.buffer_frames,
-        );
-        self.metrics.set_routing_live(
-            self.config.enabled && !self._streams.is_empty(),
-        );
+            .set_voice_buffer(self.voice_rb.available(), RING_CAPACITY_SAMPLES);
+        self.metrics.set_streams(self._streams.len());
         self.metrics
-            .set_reconnect_pending(self.reconnect.pending);
+            .set_config(self.config.sample_rate, self.config.buffer_frames);
+        self.metrics
+            .set_routing_live(self.config.enabled && !self._streams.is_empty());
+        self.metrics.set_reconnect_pending(self.reconnect.pending);
     }
 
     fn apply_config(&mut self, config: Config, restart_streams: bool) {
         self.config = config;
         self.controls.apply_gains(&self.config.gains);
-        self.controls.set_monitor_enabled(self.config.monitor.enabled);
+        self.controls
+            .set_monitor_enabled(self.config.monitor.enabled);
 
         if !self.config.enabled {
             self.release_streams();
@@ -238,7 +235,8 @@ impl AudioEngine {
 
         self.config = config;
         self.controls.apply_gains(&self.config.gains);
-        self.controls.set_monitor_enabled(self.config.monitor.enabled);
+        self.controls
+            .set_monitor_enabled(self.config.monitor.enabled);
         self.voice_rb.clear();
         self.monitor_rb.clear();
 
@@ -269,7 +267,8 @@ impl AudioEngine {
                     self.release_streams();
                     self.config = old_config.clone();
                     self.controls.apply_gains(&self.config.gains);
-                    self.controls.set_monitor_enabled(self.config.monitor.enabled);
+                    self.controls
+                        .set_monitor_enabled(self.config.monitor.enabled);
                     self.voice_rb.clear();
                     self.monitor_rb.clear();
                     return self.restore_streams(&old_config);
@@ -293,7 +292,8 @@ impl AudioEngine {
     fn restore_streams(&mut self, config: &Config) -> Result<()> {
         self.config = config.clone();
         self.controls.apply_gains(&self.config.gains);
-        self.controls.set_monitor_enabled(self.config.monitor.enabled);
+        self.controls
+            .set_monitor_enabled(self.config.monitor.enabled);
         if !self.config.enabled {
             info!("routing disabled — skip restore");
             return Ok(());
@@ -368,9 +368,7 @@ impl AudioEngine {
         )?);
 
         if self.config.monitor.enabled {
-            if let Ok(mon_dev) =
-                find_output_device(&host, &self.config.devices.monitor_output)
-            {
+            if let Ok(mon_dev) = find_output_device(&host, &self.config.devices.monitor_output) {
                 let mon_name = mon_dev.name().unwrap_or_default();
                 info!(%mon_name, "monitor output");
                 let mon_cfg = pick_stream_config(
@@ -479,15 +477,20 @@ fn open_input_stream(
     rb: Arc<SpscRingBuffer>,
     stream_fault: Arc<AtomicBool>,
 ) -> Result<Stream> {
-    match build_input_stream(device, preferred, Arc::clone(&rb), master_rate, Arc::clone(&stream_fault)) {
+    match build_input_stream(
+        device,
+        preferred,
+        Arc::clone(&rb),
+        master_rate,
+        Arc::clone(&stream_fault),
+    ) {
         Ok(stream) => Ok(stream),
         Err(err) => {
             warn!(
                 %err,
                 "preferred input config failed — falling back to native rate + resampler"
             );
-            let native =
-                pick_native_stream_config(device, true, target_channels, buffer_frames)?;
+            let native = pick_native_stream_config(device, true, target_channels, buffer_frames)?;
             build_input_stream(device, &native, rb, master_rate, stream_fault)
         }
     }

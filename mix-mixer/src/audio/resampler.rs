@@ -17,10 +17,22 @@ impl StereoResampler {
             return Err(Error::audio("resampler not needed for identical rates"));
         }
 
-        let left = FftFixedIn::<f32>::new(input_rate as usize, output_rate as usize, chunk_frames, 1, 1)
-            .map_err(|e| Error::audio(format!("resampler init left: {e}")))?;
-        let right = FftFixedIn::<f32>::new(input_rate as usize, output_rate as usize, chunk_frames, 1, 1)
-            .map_err(|e| Error::audio(format!("resampler init right: {e}")))?;
+        let left = FftFixedIn::<f32>::new(
+            input_rate as usize,
+            output_rate as usize,
+            chunk_frames,
+            1,
+            1,
+        )
+        .map_err(|e| Error::audio(format!("resampler init left: {e}")))?;
+        let right = FftFixedIn::<f32>::new(
+            input_rate as usize,
+            output_rate as usize,
+            chunk_frames,
+            1,
+            1,
+        )
+        .map_err(|e| Error::audio(format!("resampler init right: {e}")))?;
 
         Ok(Self {
             left,
@@ -108,7 +120,13 @@ pub fn from_stereo_interleaved(stereo: &[f32], channels: u16) -> Vec<f32> {
                 let l = frame[0];
                 let r = frame.get(1).copied().unwrap_or(l);
                 for i in 0..ch {
-                    out.push(if i == 0 { l } else if i == 1 { r } else { 0.0 });
+                    out.push(if i == 0 {
+                        l
+                    } else if i == 1 {
+                        r
+                    } else {
+                        0.0
+                    });
                 }
             }
             out

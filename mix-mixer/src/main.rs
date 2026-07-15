@@ -26,11 +26,15 @@ use crate::audio::metrics::AudioMetrics;
 use crate::config::Config;
 use crate::error::Result;
 use crate::i18n::Locale;
+use crate::ui::about;
 use crate::ui::settings::SettingsLauncher;
-use crate::ui::tray::{TrayAction, TrayManager};
+use crate::ui::tray::TrayAction;
 
 #[derive(Parser, Debug)]
-#[command(name = "mix-mixer", about = "Forward microphone to VB-Cable virtual mic")]
+#[command(
+    name = "mix-mixer",
+    about = "Forward microphone to VB-Cable virtual mic"
+)]
 struct Cli {
     #[arg(short, long, default_value = "config.json")]
     config: PathBuf,
@@ -44,6 +48,7 @@ pub enum AppEvent {
     Tray(TrayAction),
     SettingsApplied(Config),
     SetRoutingEnabled(bool),
+    LocaleChanged(Locale),
     Shutdown,
 }
 
@@ -88,8 +93,6 @@ fn run() -> Result<()> {
         })
         .map_err(|e| crate::error::Error::Audio(format!("spawn audio thread: {e}")))?;
 
-    let locale = Locale::resolve(Some(config.locale.code()));
-    let tray = TrayManager::new(event_tx.clone(), locale)?;
     let settings = SettingsLauncher::new(event_tx.clone(), metrics);
 
     if let Err(err) = settings.open(config_path.clone(), &config) {
@@ -98,14 +101,7 @@ fn run() -> Result<()> {
 
     info!("mix-mixer running — voice → virtual cable");
 
-    run_event_loop(
-        &config_path,
-        &mut config,
-        event_rx,
-        cmd_tx,
-        tray,
-        settings,
-    )?;
+    run_event_loop(&config_path, &mut config, event_rx, cmd_tx, settings)?;
 
     let _ = audio_handle.join();
     info!("mix-mixer stopped");
@@ -126,18 +122,18 @@ fn run_event_loop(
     config: &mut Config,
     event_rx: Receiver<AppEvent>,
     cmd_tx: Sender<AudioCommand>,
-    mut tray: TrayManager,
     settings: SettingsLauncher,
 ) -> Result<()> {
     loop {
-        tray.poll()?;
-
         while let Ok(event) = event_rx.try_recv() {
             match event {
                 AppEvent::Tray(TrayAction::OpenSettings) => {
                     if let Err(err) = settings.open(config_path.clone(), config) {
                         error!(%err, "open settings failed");
                     }
+                }
+                AppEvent::Tray(TrayAction::About) => {
+                    about::show_about(config.locale);
                 }
                 AppEvent::SettingsApplied(new_cfg) => {
                     let old_cfg = config.clone();
@@ -152,21 +148,12 @@ fn run_event_loop(
                     config.enabled = enabled;
                     let _ = cmd_tx.send(AudioCommand::SetRoutingEnabled(enabled));
                 }
+                AppEvent::LocaleChanged(locale) => {
+                    config.locale = locale;
+                }
                 AppEvent::Tray(TrayAction::Quit) => {
                     let _ = cmd_tx.send(AudioCommand::Shutdown);
                     return Ok(());
-                }
-                AppEvent::Tray(TrayAction::ToggleMonitor) => {
-                    let _ = cmd_tx.send(AudioCommand::ToggleMonitor);
-                }
-                AppEvent::Tray(TrayAction::ReloadConfig) => {
-                    match Config::load(config_path) {
-                        Ok(new_cfg) => {
-                            *config = new_cfg.clone();
-                            let _ = cmd_tx.send(AudioCommand::RestartWithConfig(Box::new(new_cfg)));
-                        }
-                        Err(err) => error!(%err, "reload config failed"),
-                    }
                 }
                 AppEvent::Shutdown => {
                     let _ = cmd_tx.send(AudioCommand::Shutdown);

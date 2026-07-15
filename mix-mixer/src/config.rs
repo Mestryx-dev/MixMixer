@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::{Error, Result};
 use crate::i18n::Locale;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Config {
     /// UI language (`en` or `fr`). Overridden by `MIXMIXER_LANG` at runtime.
     #[serde(default)]

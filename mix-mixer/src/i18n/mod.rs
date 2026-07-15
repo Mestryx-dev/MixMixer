@@ -1,9 +1,7 @@
 //! UI string catalog and locale resolution.
 //!
-//! Language is resolved in this order:
-//! 1. `MIXMIXER_LANG` environment variable (`en` or `fr`)
-//! 2. `locale` field in `config.json`
-//! 3. English (`en`) as the default
+//! The in-app **Language** dropdown (General section) is the primary way to switch UI
+//! language. The choice is saved to `config.json`. Optional override: `MIXMIXER_LANG`.
 
 mod en;
 mod fr;
@@ -59,6 +57,25 @@ impl Locale {
             Self::Fr => "fr",
         }
     }
+
+    /// Two-letter UI code (minimal locale picker).
+    pub fn short_code(self) -> &'static str {
+        match self {
+            Self::En => "EN",
+            Self::Fr => "FR",
+        }
+    }
+
+    /// Human-readable name shown in the language picker.
+    pub fn display_name(self) -> &'static str {
+        match self {
+            Self::En => "English",
+            Self::Fr => "Français",
+        }
+    }
+
+    /// All supported locales (for dropdown menus).
+    pub const ALL: [Locale; 2] = [Self::En, Self::Fr];
 }
 
 /// All user-visible UI strings for a locale.
@@ -70,6 +87,8 @@ pub struct UiText {
     pub btn_quit: &'static str,
     pub btn_cancel: &'static str,
     pub btn_apply: &'static str,
+    pub footer_unsaved: &'static str,
+    pub section_general: &'static str,
     pub section_routing: &'static str,
     pub section_devices: &'static str,
     pub section_audio: &'static str,
@@ -88,9 +107,10 @@ pub struct UiText {
     pub status_send_failed: &'static str,
     pub status_command_failed: &'static str,
     pub window_title: &'static str,
-    pub tray_settings: &'static str,
-    pub tray_toggle_monitor: &'static str,
-    pub tray_reload: &'static str,
+    pub tray_about: &'static str,
     pub tray_quit: &'static str,
     pub tray_tooltip: &'static str,
+    pub about_title: &'static str,
+    pub about_description: &'static str,
+    pub about_url: &'static str,
 }

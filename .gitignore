@@ -4,9 +4,12 @@ mix-mixer/target/
 # Local user config (device names vary per machine)
 mix-mixer/config.json
 
-# Binaires locaux
+# Binaries and local packaging (release assets stay on GitHub Releases)
 *.exe
 *.pdb
+*.zip
+release-staging/
+debug-*.log
 
 # OS / IDE
 .DS_Store

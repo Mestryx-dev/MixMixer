@@ -19,8 +19,10 @@ impl MixControls {
     }
 
     pub fn apply_gains(&self, gains: &Gains) {
-        self.voice_gain.store(gains.voice.to_bits(), Ordering::Relaxed);
-        self.master_gain.store(gains.master.to_bits(), Ordering::Relaxed);
+        self.voice_gain
+            .store(gains.voice.to_bits(), Ordering::Relaxed);
+        self.master_gain
+            .store(gains.master.to_bits(), Ordering::Relaxed);
     }
 
     pub fn toggle_monitor(&self) -> bool {

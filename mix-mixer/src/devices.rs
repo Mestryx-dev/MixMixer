@@ -97,11 +97,19 @@ fn print_device(prefix: &str, device: &Device) {
 }
 
 pub fn find_input_device(host: &Host, name_substr: &str) -> Result<Device> {
-    find_device(host.input_devices().map_err(map_device_err)?, name_substr, "input")
+    find_device(
+        host.input_devices().map_err(map_device_err)?,
+        name_substr,
+        "input",
+    )
 }
 
 pub fn find_output_device(host: &Host, name_substr: &str) -> Result<Device> {
-    find_device(host.output_devices().map_err(map_device_err)?, name_substr, "output")
+    find_device(
+        host.output_devices().map_err(map_device_err)?,
+        name_substr,
+        "output",
+    )
 }
 
 pub fn try_find_input_device(host: &Host, name_substr: &str) -> Option<Device> {

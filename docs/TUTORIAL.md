@@ -95,10 +95,12 @@ Same for GTA voice chat, OBS audio input, etc.
 ```
 
 - Settings window opens automatically.
-- Tray icon appears; double-click to reopen settings.
+- Tray icon appears; **double-click** to reopen settings.
 - Header shows **Active**, latency in ms, and buffer fill when routing works.
+- **FR** / **EN** chips under the metrics switch the UI language.
+- Closing the window (×) or minimizing **hides to tray** — MixMixer keeps running.
 
-Click **Apply** after changing devices or gains. The window stays open.
+Click **Apply** after changing devices or gains. A short toast confirms; the window stays open.
 
 ## Step 6 — Verify audio
 
@@ -110,14 +112,15 @@ Click **Apply** after changing devices or gains. The window stays open.
 
 Configure your soundboard app to output to **CABLE Input**. Windows mixes soundboard + MixMixer voice on the same virtual cable. Discord hears both on **CABLE Output**.
 
-## Tray menu
+## System tray
 
-| Item | Effect |
-|------|--------|
-| Settings | Open settings window |
-| Toggle headphone monitor | Flip monitor without opening settings |
-| Reload config | Re-read `config.json` and restart audio |
-| Quit | Exit MixMixer |
+| Action | Effect |
+|--------|--------|
+| Double-click tray icon | Open settings |
+| Right-click → About | Show about dialog (version + project link) |
+| Right-click → Quit | Exit MixMixer |
+
+To quit, use the tray **Quit** item — closing the settings window only hides it.
 
 ## Tuning latency
 
@@ -132,7 +135,7 @@ If you hear crackling, increase `buffer_frames`.
 
 ## Changing language
 
-French UI:
+Click **FR** or **EN** in the settings header (saved to `config.json`), or set:
 
 ```json
 "locale": "fr"
@@ -156,7 +159,7 @@ $env:MIXMIXER_LANG = "fr"
 
 ## Uninstall / reset
 
-1. Quit MixMixer from tray.
+1. Quit MixMixer from the tray menu (right-click → Quit).
 2. Delete `config.json` or restore from `config.example.json`.
 3. VB-Cable can stay installed for other apps.
 
