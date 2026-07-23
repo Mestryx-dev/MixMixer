@@ -31,8 +31,8 @@ impl Theme {
 
     pub const HEADER_BODY_H: f32 = 52.0;
     pub const HEADER_FRAME_V: f32 = 20.0;
-    pub const FOOTER_BODY_H: f32 = 36.0;
-    pub const FOOTER_FRAME_V: f32 = 28.0;
+    pub const FOOTER_BODY_H: f32 = 24.0;
+    pub const FOOTER_FRAME_V: f32 = 20.0;
 
     pub const SECTION_FIRST_H: f32 = 33.0;
     pub const SECTION_NEXT_H: f32 = 41.0;
@@ -649,25 +649,9 @@ pub fn toast(ctx: &Context, message: &str, ok: bool, age_secs: f32) {
         });
 }
 
-pub struct FooterActions {
-    pub apply: bool,
-    pub cancel: bool,
-}
-
-/// Settings footer: version (left), Cancel + Apply (right, Windows property-sheet order).
-pub fn settings_footer(
-    ui: &mut Ui,
-    texts: &UiText,
-    version: &str,
-    has_unsaved: bool,
-) -> FooterActions {
-    let mut actions = FooterActions {
-        apply: false,
-        cancel: false,
-    };
-
+/// Settings footer: version link only (changes apply live).
+pub fn settings_footer(ui: &mut Ui, version: &str) {
     ui.set_min_height(Theme::FOOTER_BODY_H);
-
     ui.horizontal(|ui| {
         ui.hyperlink_to(
             egui::RichText::new(format!("MixMixer v{version}"))
@@ -675,81 +659,7 @@ pub fn settings_footer(
                 .color(Theme::ACCENT),
             env!("CARGO_PKG_REPOSITORY"),
         );
-        if has_unsaved {
-            ui.add_space(8.0);
-            ui.label(
-                egui::RichText::new(texts.footer_unsaved)
-                    .size(12.0)
-                    .color(Theme::WARNING),
-            );
-        }
-
-        ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
-            ui.spacing_mut().item_spacing.x = 10.0;
-            ui.set_width(ui.available_width());
-
-            let apply_clicked = ui
-                .add_enabled(has_unsaved, |ui: &mut Ui| {
-                    ui.add(
-                        egui::Button::new(
-                            egui::RichText::new(texts.btn_apply)
-                                .size(15.0)
-                                .color(Color32::WHITE),
-                        )
-                        .fill(if has_unsaved {
-                            Theme::ACCENT
-                        } else {
-                            Theme::BTN_SECONDARY
-                        })
-                        .stroke(Stroke::NONE)
-                        .rounding(Rounding::same(8.0))
-                        .min_size(vec2(96.0, 36.0)),
-                    )
-                })
-                .clicked();
-            if apply_clicked {
-                actions.apply = true;
-            }
-
-            if btn_secondary(ui, texts.btn_cancel) {
-                actions.cancel = true;
-            }
-        });
     });
-
-    actions
-}
-
-pub fn btn_primary(ui: &mut Ui, label: &str) -> bool {
-    ui.add(
-        egui::Button::new(egui::RichText::new(label).size(15.0).color(Color32::WHITE))
-            .fill(Theme::ACCENT)
-            .stroke(Stroke::NONE)
-            .rounding(Rounding::same(8.0))
-            .min_size(vec2(96.0, 36.0)),
-    )
-    .clicked()
-}
-
-pub fn btn_secondary(ui: &mut Ui, label: &str) -> bool {
-    ui.add(
-        egui::Button::new(egui::RichText::new(label).size(15.0).color(Theme::TEXT))
-            .fill(Theme::BTN_SECONDARY)
-            .stroke(Stroke::NONE)
-            .rounding(Rounding::same(8.0))
-            .min_size(vec2(96.0, 36.0)),
-    )
-    .clicked()
-}
-
-pub fn btn_text(ui: &mut Ui, label: &str) -> bool {
-    ui.add(
-        egui::Button::new(egui::RichText::new(label).size(15.0).color(Theme::ACCENT))
-            .fill(Color32::TRANSPARENT)
-            .stroke(Stroke::NONE)
-            .min_size(vec2(64.0, 36.0)),
-    )
-    .clicked()
 }
 
 pub fn panel_frame() -> Frame {

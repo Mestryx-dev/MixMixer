@@ -30,7 +30,8 @@ External soundboard / browser ──► CABLE Input (separate app; Windows mixes
 - iOS-style settings window (egui) with live latency metrics
 - System tray: **left-click or double-click** opens settings; **right-click** → About / Quit
 - Hide to tray on close or minimize (does not quit); taskbar click restores the window
-- Toast feedback on Apply; GitHub link in the footer
+- Live settings (no Apply): changes take effect immediately; listen volume is hot
+- GitHub link in the footer
 - EN / FR language chips in the header (`locale` in config or `MIXMIXER_LANG`)
 - Auto-reconnect when Windows audio devices change (e.g. Discord switching devices)
 - Optional headphone monitor bus
@@ -122,10 +123,8 @@ All UI strings live in [`mix-mixer/src/i18n/`](mix-mixer/src/i18n/).
 | Enable routing | Master on/off for mic → VB-Cable |
 | Device pickers | Microphone, virtual mic, monitor output |
 | Headphone monitor | Toggle local monitoring |
-| Listen volume | Level in headphones only (CABLE stays unity) |
-| Buffer | Latency / stability trade-off |
-| **Apply** | Save and activate (toast; window stays open) |
-| **Cancel** | Revert to last applied values |
+| Listen volume | Level in headphones only (CABLE stays unity) — live |
+| Buffer | Latency / stability trade-off — applied live |
 | Close (×) / minimize | Hide window to tray (app keeps running) |
 | Footer version | Opens the [GitHub repository](https://github.com/Mestryx-dev/MixMixer) |
 

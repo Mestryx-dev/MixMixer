@@ -79,7 +79,7 @@ Same for GTA voice chat, OBS audio input, etc.
 - Closing the window (×) or minimizing **hides to tray** — MixMixer keeps running.
 - Clicking the minimized app on the **taskbar** also restores the settings window.
 
-Click **Apply** after changing devices or listen volume. A short toast confirms; the window stays open.
+Changes apply **live** (devices, routing, listen volume, buffer) — no Apply button. Config is saved automatically.
 
 **Écoute casque / Listen volume** only changes how loud you hear yourself in headphones — Discord / CABLE stays at unity.
 

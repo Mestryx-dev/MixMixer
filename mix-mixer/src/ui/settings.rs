@@ -116,8 +116,12 @@ impl SettingsLauncher {
 
 struct SettingsApp {
     config_path: PathBuf,
+    /// Last config known by the audio engine / disk.
     baseline: Config,
+    /// Editable UI state (applied live).
     draft: Config,
+    /// Last config pushed to the audio engine (for live volume without spam).
+    live_sent: Config,
     devices: DeviceLists,
     toast: Option<Toast>,
     event_tx: Sender<AppEvent>,
@@ -129,6 +133,8 @@ struct SettingsApp {
     tray: TrayHandle,
     hidden_to_tray: Arc<AtomicBool>,
     last_minimized: bool,
+    /// Debounced disk write after live changes (especially volume slider).
+    save_after: Option<Instant>,
 }
 
 impl SettingsApp {
@@ -148,9 +154,11 @@ impl SettingsApp {
         Self {
             config_path,
             draft: baseline.clone(),
+            live_sent: baseline.clone(),
             baseline,
             devices,
             toast: None,
+            save_after: None,
             event_tx,
             metrics,
             window_height: Theme::window_height(),
@@ -239,6 +247,7 @@ impl SettingsApp {
     }
 
     fn hide_to_tray(&mut self, ctx: &egui::Context) {
+        self.flush_save_now();
         self.hidden_to_tray.store(true, Ordering::Release);
         ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(true));
     }
@@ -247,6 +256,8 @@ impl SettingsApp {
         self.hidden_to_tray.store(false, Ordering::Release);
         self.baseline = normalize_draft_devices(config, &self.devices);
         self.draft = self.baseline.clone();
+        self.live_sent = self.baseline.clone();
+        self.save_after = None;
         self.toast = None;
         ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
         ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(false));
@@ -269,6 +280,7 @@ impl SettingsApp {
                 }
                 SettingsCommand::Hide => self.hide_to_tray(ctx),
                 SettingsCommand::Shutdown => {
+                    self.flush_save_now();
                     let _ = self.event_tx.send(AppEvent::Shutdown);
                     ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                 }
@@ -286,6 +298,7 @@ impl SettingsApp {
             ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
             self.hide_to_tray(ctx);
         } else if minimized && !self.hidden_to_tray.load(Ordering::Acquire) {
+            self.flush_save_now();
             self.hidden_to_tray.store(true, Ordering::Release);
         }
     }
@@ -304,62 +317,49 @@ impl SettingsApp {
         self.tray.poll(&self.event_tx);
     }
 
-    fn apply(&mut self) {
+    /// Push draft to the audio engine immediately (volume stays hot without stream restart).
+    fn commit_live_changes(&mut self) {
+        normalize_config_devices(&mut self.draft);
+        if self.draft == self.live_sent {
+            return;
+        }
+        let applied = self.draft.clone();
+        if self
+            .event_tx
+            .send(AppEvent::SettingsApplied(applied))
+            .is_err()
+        {
+            self.show_toast(self.texts().status_send_failed, false);
+            return;
+        }
+        self.live_sent = self.draft.clone();
+        if self.draft != self.baseline {
+            self.save_after = Some(Instant::now() + Duration::from_millis(300));
+        }
+    }
+
+    fn flush_debounced_save(&mut self) {
+        let Some(deadline) = self.save_after else {
+            return;
+        };
+        if Instant::now() < deadline {
+            return;
+        }
+        self.flush_save_now();
+    }
+
+    fn flush_save_now(&mut self) {
+        self.save_after = None;
+        if self.draft == self.baseline {
+            return;
+        }
         normalize_config_devices(&mut self.draft);
         match self.draft.save(&self.config_path) {
             Ok(()) => {
-                info!(path = %self.config_path.display(), "config saved from settings");
-                let applied = self.draft.clone();
-                if self
-                    .event_tx
-                    .send(AppEvent::SettingsApplied(applied))
-                    .is_err()
-                {
-                    self.show_toast(self.texts().status_send_failed, false);
-                    return;
-                }
+                info!(path = %self.config_path.display(), "config saved (live)");
                 self.baseline = self.draft.clone();
-                self.show_toast(self.texts().status_apply_ok, true);
             }
-            Err(err) => {
-                self.show_toast(err.to_string(), false);
-            }
-        }
-    }
-
-    fn cancel(&mut self) {
-        self.draft = self.baseline.clone();
-        self.toast = None;
-    }
-
-    fn set_routing(&mut self, enabled: bool) {
-        if self.draft.enabled == enabled {
-            return;
-        }
-        self.draft.enabled = enabled;
-        match self.draft.save(&self.config_path) {
-            Ok(()) => {
-                if self
-                    .event_tx
-                    .send(AppEvent::SetRoutingEnabled(enabled))
-                    .is_err()
-                {
-                    self.draft.enabled = !enabled;
-                    self.show_toast(self.texts().status_command_failed, false);
-                    return;
-                }
-                self.baseline.enabled = enabled;
-                let msg = if enabled {
-                    self.texts().status_routing_on
-                } else {
-                    self.texts().status_routing_off
-                };
-                self.show_toast(msg, true);
-            }
-            Err(err) => {
-                self.draft.enabled = !enabled;
-                self.show_toast(err.to_string(), false);
-            }
+            Err(err) => self.show_toast(err.to_string(), false),
         }
     }
 
@@ -376,6 +376,7 @@ impl SettingsApp {
             return;
         }
         self.baseline.locale = locale;
+        self.live_sent.locale = locale;
         match TrayHandle::new(
             locale,
             Arc::clone(&self.ui_ctx),
@@ -407,6 +408,7 @@ impl eframe::App for SettingsApp {
         self.poll_commands(ctx);
         self.poll_viewport_restore(ctx);
         self.sync_window_size(ctx);
+        self.flush_debounced_save();
 
         let snap = self.metrics.snapshot();
         let texts = self.texts();
@@ -424,15 +426,7 @@ impl eframe::App for SettingsApp {
             .exact_height(Theme::footer_height())
             .frame(theme::footer_frame())
             .show(ctx, |ui| {
-                let has_unsaved = self.draft != self.baseline;
-                let actions =
-                    theme::settings_footer(ui, texts, env!("CARGO_PKG_VERSION"), has_unsaved);
-                if actions.cancel {
-                    self.cancel();
-                }
-                if actions.apply {
-                    self.apply();
-                }
+                theme::settings_footer(ui, env!("CARGO_PKG_VERSION"));
             });
 
         egui::CentralPanel::default()
@@ -442,11 +436,7 @@ impl eframe::App for SettingsApp {
 
                 theme::section_header(ui, texts.section_general, true);
                 theme::group_box(ui, |ui| {
-                    let mut enabled = self.draft.enabled;
-                    theme::routing_row(ui, texts, &mut enabled);
-                    if enabled != self.draft.enabled {
-                        self.set_routing(enabled);
-                    }
+                    theme::routing_row(ui, texts, &mut self.draft.enabled);
                 });
 
                 theme::section_header(ui, texts.section_devices, false);
@@ -502,6 +492,7 @@ impl eframe::App for SettingsApp {
                 theme::section_footer(ui, texts.buffer_hint);
             });
 
+        self.commit_live_changes();
         self.poll_toast(ctx);
     }
 }

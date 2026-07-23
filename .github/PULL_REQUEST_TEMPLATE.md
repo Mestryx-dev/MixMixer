@@ -15,7 +15,7 @@
 
 - [ ] Built with `cargo build --release`
 - [ ] Tested mic → CABLE Input → CABLE Output → Discord (or equivalent)
-- [ ] Settings Apply / Cancel / routing toggle work
+- [ ] Settings live apply (routing, devices, listen volume) and tray restore work
 - [ ] No unintended changes to `config.json` committed
 
 ## Checklist
